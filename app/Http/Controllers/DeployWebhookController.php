@@ -51,10 +51,9 @@ class DeployWebhookController extends Controller
                 'COMPOSER_ALLOW_SUPERUSER' => '1',
             ];
 
-            // TODO: confirm this against `which composer` on the server -
-            // if it differs, replace 'composer' below with the absolute path.
+            // Confirmed on this account: `which composer` -> /usr/local/bin/composer
             $this->run(
-                ['/opt/alt/php83/usr/bin/php', 'composer', 'install', '--no-dev', '--optimize-autoloader', '--no-interaction'],
+                ['/opt/alt/php83/usr/bin/php', '/usr/local/bin/composer', 'install', '--no-dev', '--optimize-autoloader', '--no-interaction'],
                 $repoPath,
                 $env
             );

@@ -12,7 +12,7 @@ instead of cron or direct-SSH).
 | App path (git working copy) | `/home/u823311221/domains/carpool.guykats.com/app` |
 | Webroot symlink | `/home/u823311221/domains/carpool.guykats.com/public_html` → `app/public` |
 | PHP binary | `/opt/alt/php83/usr/bin/php` (not on `PATH` by default) |
-| Composer | on `PATH` for interactive/cron shells - **confirm with `which composer`**, needed explicitly for the webhook's PHP-FPM subprocess |
+| Composer | `/usr/local/bin/composer` (confirmed via `which composer`) |
 | Server's checked-out branch | `deploy` (not `main`) |
 | Deploy trigger | CI POSTs to `/deploy-webhook` right after pushing to `deploy` - no cron, no SSH, no manual step for normal deploys |
 | DB | MySQL - create in hPanel, will be named `u823311221_something` |
@@ -113,8 +113,5 @@ before CI can call it successfully.
 - `APP_DEBUG=false` in production - it's already `false` in
   `.env.production.example`.
 - No queue workers needed - this app has no queued jobs.
-- If `which composer` above returned something other than a bare
-  `composer` resolvable via a short PATH, update the `PATH` env array
-  and the composer invocation in `DeployWebhookController.php`
-  accordingly (it currently assumes composer resolves via
-  `/opt/alt/php83/usr/bin:/usr/local/bin:/usr/bin:/bin`).
+- Composer is confirmed at `/usr/local/bin/composer` on this account -
+  already reflected in `DeployWebhookController.php`.
