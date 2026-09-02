@@ -27,6 +27,13 @@ return Application::configure(basePath: dirname(__DIR__))
             'identify.parent' => \App\Http\Middleware\IdentifyParent::class,
             'ensure.admin' => \App\Http\Middleware\EnsureAdmin::class,
         ]);
+
+        // The deploy webhook is an external POST from GitHub Actions/curl -
+        // it will never carry a browser CSRF token, so it must be excluded
+        // here or every call gets a 419 "Page Expired" from VerifyCsrfToken.
+        $middleware->validateCsrfTokens(except: [
+            'deploy-webhook',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
