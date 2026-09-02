@@ -39,6 +39,7 @@ jobs:
       - name: Debug secret length
         run: |
           echo "Length: ${#URL}"
+          printf '%s' "$URL" | od -c | tail -5
         env:
           URL: ${{ secrets.DEPLOY_WEBHOOK_URL }}
 
