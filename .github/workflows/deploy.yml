@@ -37,7 +37,8 @@ jobs:
           git push origin HEAD:deploy --force
 
       - name: Debug secret length
-        run: echo "Length: ${#URL}"
+        run: |
+          echo "Length: ${#URL}"
         env:
           URL: ${{ secrets.DEPLOY_WEBHOOK_URL }}
 
