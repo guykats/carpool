@@ -30,6 +30,7 @@ Route::middleware('identify.parent')->group(function () {
     Route::middleware('ensure.admin')->prefix('admin')->group(function () {
         Route::get('/', [AdminController::class, 'index'])->name('admin');
         Route::post('/children', [AdminController::class, 'storeChild']);
+        Route::post('/children/{child}/delete', [AdminController::class, 'destroyChild']);
         Route::post('/parents/{parent}/reassign', [AdminController::class, 'reassignParent']);
         Route::post('/shifts/{shift}/override', [AdminController::class, 'overrideShift']);
         Route::post('/shifts/{shift}/time', [AdminController::class, 'editShiftTime']);

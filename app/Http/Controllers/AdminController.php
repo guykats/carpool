@@ -31,6 +31,21 @@ class AdminController extends Controller
     }
 
     /**
+     * Deleting a child nulls out child_id on any parents/shifts that
+     * referenced it (both FKs are nullOnDelete - see the migrations), so
+     * this is safe at the DB level. It does lose that child's historical
+     * ride count from the scoreboard though (Shift::whereNotNull('child_id')
+     * in ShiftController::scoreboard), which the frontend warns about
+     * before calling this.
+     */
+    public function destroyChild(Child $child)
+    {
+        $child->delete();
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
      * Reassign a parent to a different child, or merge duplicate device
      * identities onto the right child - PRD 4.3 / edge cases in section 6.
      */

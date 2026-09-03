@@ -67,9 +67,26 @@ export default function Admin({
 
                 <section className="rounded-2xl bg-white p-4 shadow-sm">
                     <h2 className="mb-3 font-semibold text-[#1B4332]">רשימת ילדים</h2>
-                    <ul className="mb-3 space-y-1 text-sm text-[#5C6B66]">
+                    <ul className="mb-3 space-y-1 text-sm">
                         {children.map((c) => (
-                            <li key={c.id}>{c.name}</li>
+                            <li key={c.id} className="flex items-center justify-between text-[#5C6B66]">
+                                <span>{c.name}</span>
+                                <button
+                                    onClick={() => {
+                                        if (
+                                            confirm(
+                                                `למחוק את ${c.name}? הורים ששויכו אליו/ה יהפכו ל"ללא שיוך", ` +
+                                                    'וההיסטוריה שלו/ה תיעלם מהסטטוס בהדר. הפעולה לא הפיכה.'
+                                            )
+                                        ) {
+                                            post(`/admin/children/${c.id}/delete`, {});
+                                        }
+                                    }}
+                                    className="text-xs text-red-600 underline"
+                                >
+                                    מחיקה
+                                </button>
+                            </li>
                         ))}
                     </ul>
                     <div className="flex gap-2">
