@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { router } from '@inertiajs/react';
 import QRCode from 'qrcode';
 import IdentityGateAndForm from '../components/identity-gate-and-form';
-import { setParentUuid } from '../lib/parentIdentity';
+import { clearParentUuid, getParentUuid, setParentUuid } from '../lib/parentIdentity';
 
 type Child = { id: number; name: string };
 
@@ -75,10 +75,45 @@ function QrPairingScreen({ onIdentified }: { onIdentified: (uuid: string) => voi
 
 export default function Login({ children }: { children: Child[] }) {
     const [showQr, setShowQr] = useState(false);
+    const [checkingExisting, setCheckingExisting] = useState(true);
+
+    useEffect(() => {
+        // The very first page load is a plain browser navigation - it can't
+        // carry X-Parent-Uuid (that only happens on Inertia-driven visits,
+        // see attachParentIdentityToRequests). So if a UUID is already
+        // saved, the server still rendered this login page by mistake; fix
+        // it with one client-side visit, which DOES carry the header.
+        //
+        // The `resync` marker prevents an infinite loop: if we already
+        // tried this once and the server *still* shows the login page, the
+        // saved UUID must be stale (e.g. the record was deleted) - clear it
+        // instead of retrying forever.
+        const existingUuid = getParentUuid();
+        const alreadyTried = new URLSearchParams(window.location.search).has('resync');
+
+        if (existingUuid && !alreadyTried) {
+            router.visit('/?resync=1', { replace: true });
+            return;
+        }
+
+        if (existingUuid && alreadyTried) {
+            clearParentUuid();
+        }
+
+        setCheckingExisting(false);
+    }, []);
 
     function handleIdentified(uuid: string) {
         setParentUuid(uuid);
         router.visit('/');
+    }
+
+    if (checkingExisting) {
+        return (
+            <div dir="rtl" className="flex min-h-screen items-center justify-center bg-[#F7F7F2] px-4">
+                <p className="text-sm text-[#5C6B66]">טוענים...</p>
+            </div>
+        );
     }
 
     return (
