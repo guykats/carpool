@@ -65,10 +65,19 @@ class ShiftController extends Controller
         $parent = $request->attributes->get('currentParent');
         abort_if(! $parent, 401);
 
+        $data = $request->validate([
+            'seats' => ['required', 'integer', 'min:1', 'max:4'],
+        ]);
+
         $updated = DB::table('shifts')
             ->where('id', $shift->id)
             ->whereNull('parent_id')
-            ->update(['parent_id' => $parent->id, 'child_id' => $parent->child_id, 'updated_at' => now()]);
+            ->update([
+                'parent_id' => $parent->id,
+                'child_id' => $parent->child_id,
+                'seats' => $data['seats'],
+                'updated_at' => now(),
+            ]);
 
         if ($updated === 0) {
             return response()->json(['error' => 'This slot was just taken. Refreshing the board.'], 409);
@@ -93,7 +102,7 @@ class ShiftController extends Controller
         abort_if(! $parent, 401);
         abort_if($shift->child_id !== $parent->child_id, 403, 'You can only cancel shifts for your own child.');
 
-        $shift->update(['parent_id' => null, 'child_id' => null]);
+        $shift->update(['parent_id' => null, 'child_id' => null, 'seats' => null]);
 
         return response()->json(['shift' => $this->presentShift($shift->fresh())]);
     }
@@ -159,6 +168,7 @@ class ShiftController extends Controller
             'parentId' => $shift->parent_id,
             'childId' => $shift->child_id,
             'childName' => $shift->child?->name,
+            'seats' => $shift->seats,
         ];
     }
 }

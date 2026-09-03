@@ -11,6 +11,7 @@ type Shift = {
     parentId: number | null;
     childId: number | null;
     childName: string | null;
+    seats: number | null;
 };
 
 type ScoreRow = { child_id: number; child_name: string; rides: number };
@@ -64,19 +65,21 @@ export default function Main({
 }) {
     const [busyId, setBusyId] = useState<number | null>(null);
     const [notice, setNotice] = useState<string | null>(null);
+    const [seatsChoice, setSeatsChoice] = useState<Record<number, number>>({});
 
     const byDate = shifts.reduce<Record<string, Shift[]>>((acc, s) => {
         (acc[s.date] ??= []).push(s);
         return acc;
     }, {});
 
-    async function act(shift: Shift, action: 'assign' | 'cancel') {
+    async function act(shift: Shift, action: 'assign' | 'cancel', seats?: number) {
         setBusyId(shift.id);
         setNotice(null);
         try {
             const res = await fetch(`/shifts/${shift.id}/${action}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken(), ...parentUuidHeader() },
+                body: action === 'assign' ? JSON.stringify({ seats }) : undefined,
             });
             if (res.status === 409) {
                 setNotice('המשבצת נתפסה, מרעננים את הלוח...');
@@ -160,7 +163,12 @@ export default function Main({
                                                         />
                                                         {shift.childName}
                                                     </p>
-                                                    <p className="text-[11px] text-[#5C6B66]">מסיע/ה: {shift.parentName}</p>
+                                                    <p className="text-[11px] text-[#5C6B66]">
+                                                        מסיע/ה: {shift.parentName}
+                                                        {shift.seats
+                                                            ? ` · לוקח/ת ${shift.seats === 1 ? 'ילד אחד' : `${shift.seats} ילדים`}`
+                                                            : ''}
+                                                    </p>
                                                 </>
                                             ) : (
                                                 <p className="text-xs text-[#5C6B66]">{shift.isPast ? 'לא שובץ' : 'פנוי'}</p>
@@ -179,13 +187,29 @@ export default function Main({
                                                 </a>
                                             )}
                                             {!shift.parentName && !shift.isPast && (
-                                                <button
-                                                    disabled={busyId === shift.id}
-                                                    onClick={() => act(shift, 'assign')}
-                                                    className="rounded-lg bg-[#E8A33D] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
-                                                >
-                                                    אני מסיע
-                                                </button>
+                                                <>
+                                                    <select
+                                                        value={seatsChoice[shift.id] ?? 1}
+                                                        onChange={(e) =>
+                                                            setSeatsChoice((prev) => ({ ...prev, [shift.id]: Number(e.target.value) }))
+                                                        }
+                                                        className="rounded-lg border border-[#D8DDD9] bg-white px-2 py-1.5 text-xs text-[#1B4332]"
+                                                        aria-label="כמה ילדים לוקחים"
+                                                    >
+                                                        {[1, 2, 3, 4].map((n) => (
+                                                            <option key={n} value={n}>
+                                                                {n === 1 ? 'ילד אחד' : `${n} ילדים`}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                    <button
+                                                        disabled={busyId === shift.id}
+                                                        onClick={() => act(shift, 'assign', seatsChoice[shift.id] ?? 1)}
+                                                        className="rounded-lg bg-[#E8A33D] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                                                    >
+                                                        אני מסיע
+                                                    </button>
+                                                </>
                                             )}
                                             {isMyChild && shift.parentName && !shift.isPast && (
                                                 <button
