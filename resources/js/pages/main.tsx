@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { router } from '@inertiajs/react';
+import { getParentUuid } from '../lib/parentIdentity';
 
 type Shift = {
     id: number;
@@ -43,7 +44,7 @@ function csrfToken() {
 }
 
 function parentUuidHeader() {
-    return { 'X-Parent-Uuid': localStorage.getItem('carpool_parent_uuid') ?? '' };
+    return { 'X-Parent-Uuid': getParentUuid() ?? '' };
 }
 
 function googleCalendarUrl(shift: Shift): string {

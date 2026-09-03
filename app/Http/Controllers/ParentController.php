@@ -40,6 +40,14 @@ class ParentController extends Controller
             'is_admin' => false,
         ]);
 
-        return response()->json(['uuid' => $parent->uuid]);
+        // Set the identity cookie server-side (400 days - see
+        // env.production.example for why that number). This is the
+        // primary identity mechanism: unlike the X-Parent-Uuid header
+        // (which JS has to attach and can't on the very first hard page
+        // load), a cookie is sent automatically on every request from
+        // this point on, including cold starts.
+        return response()
+            ->json(['uuid' => $parent->uuid])
+            ->cookie('carpool_parent_uuid', $parent->uuid, 400 * 24 * 60, '/', null, $request->secure(), false, false, 'Lax');
     }
 }

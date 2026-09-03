@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { router } from '@inertiajs/react';
+import { getParentUuid } from '../lib/parentIdentity';
 
 type Child = { id: number; name: string };
 type ParentRow = { id: number; name: string; is_admin: boolean; child: Child | null };
@@ -10,7 +11,7 @@ function csrfToken() {
 }
 
 function parentUuidHeader() {
-    return { 'X-Parent-Uuid': localStorage.getItem('carpool_parent_uuid') ?? '' };
+    return { 'X-Parent-Uuid': getParentUuid() ?? '' };
 }
 
 async function post(url: string, body: unknown) {
