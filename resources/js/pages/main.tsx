@@ -17,6 +17,8 @@ type Shift = {
 
 type ScoreRow = { child_id: number; child_name: string; rides: number };
 
+type ParentRow = { id: number; name: string; child: { id: number; name: string } | null };
+
 type CurrentParent = {
     id: number;
     name: string;
@@ -66,11 +68,13 @@ export default function Main({
     weekStart,
     shifts,
     scoreboard,
+    parents,
 }: {
     currentParent: CurrentParent;
     weekStart: string;
     shifts: Shift[];
     scoreboard: ScoreRow[];
+    parents: ParentRow[];
 }) {
     const [busyId, setBusyId] = useState<number | null>(null);
     const [notice, setNotice] = useState<string | null>(null);
@@ -93,6 +97,34 @@ export default function Main({
             if (res.status === 409) {
                 setNotice('המשבצת נתפסה, מרעננים את הלוח...');
             }
+            router.reload({ only: ['shifts', 'scoreboard'] });
+        } finally {
+            setBusyId(null);
+        }
+    }
+
+    async function adminOverride(shift: Shift, parentId: number | null, seats: number) {
+        setBusyId(shift.id);
+        try {
+            await fetch(`/admin/shifts/${shift.id}/override`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken(), ...parentUuidHeader() },
+                body: JSON.stringify({ parent_id: parentId, seats }),
+            });
+            router.reload({ only: ['shifts', 'scoreboard'] });
+        } finally {
+            setBusyId(null);
+        }
+    }
+
+    async function adminSetTime(shift: Shift, time: string) {
+        setBusyId(shift.id);
+        try {
+            await fetch(`/admin/shifts/${shift.id}/time`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken(), ...parentUuidHeader() },
+                body: JSON.stringify({ time }),
+            });
             router.reload({ only: ['shifts', 'scoreboard'] });
         } finally {
             setBusyId(null);
@@ -166,8 +198,9 @@ export default function Main({
                                 return (
                                     <li
                                         key={shift.id}
-                                        className="flex items-center justify-between border-b border-[#F0F0EC] px-4 py-3 last:border-0"
+                                        className="border-b border-[#F0F0EC] px-4 py-3 last:border-0"
                                     >
+                                        <div className="flex items-center justify-between">
                                         <div>
                                             <p className="text-sm font-medium text-[#1B4332]">
                                                 {SLOT_LABELS[shift.type]} · {shift.time}
@@ -242,6 +275,17 @@ export default function Main({
                                                 </button>
                                             )}
                                         </div>
+                                        </div>
+
+                                        {currentParent.is_admin && (
+                                            <AdminOverrideControls
+                                                shift={shift}
+                                                parents={parents}
+                                                busy={busyId === shift.id}
+                                                onOverride={adminOverride}
+                                                onSetTime={adminSetTime}
+                                            />
+                                        )}
                                     </li>
                                 );
                             })}
@@ -260,6 +304,79 @@ export default function Main({
                     ⚙️
                 </Link>
             )}
+        </div>
+    );
+}
+
+/**
+ * Inline admin override controls, shown below every shift row (including
+ * already-past ones - see PRD 4.2.3 / 4.3 and admin.tsx's removal note).
+ * Lets an admin assign/clear any shift and edit its time, regardless of
+ * who currently holds it or whether it already happened.
+ */
+function AdminOverrideControls({
+    shift,
+    parents,
+    busy,
+    onOverride,
+    onSetTime,
+}: {
+    shift: Shift;
+    parents: ParentRow[];
+    busy: boolean;
+    onOverride: (shift: Shift, parentId: number | null, seats: number) => void;
+    onSetTime: (shift: Shift, time: string) => void;
+}) {
+    const [parentId, setParentId] = useState<string>(shift.parentId?.toString() ?? '');
+    const [seats, setSeats] = useState(shift.seats ?? 1);
+    const [time, setTime] = useState(shift.time);
+
+    return (
+        <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg bg-[#F7F7F2] px-2 py-2 text-xs">
+            <span className="font-medium text-[#E8A33D]">אדמין:</span>
+
+            <input
+                type="time"
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+                onBlur={() => time !== shift.time && onSetTime(shift, time)}
+                className="rounded border border-[#D8DDD9] bg-white px-1.5 py-1 text-[#1B4332]"
+            />
+
+            <select
+                value={parentId}
+                onChange={(e) => setParentId(e.target.value)}
+                className="min-w-28 flex-1 rounded border border-[#D8DDD9] bg-white px-1.5 py-1 text-[#1B4332]"
+            >
+                <option value="">— פנוי —</option>
+                {parents.map((p) => (
+                    <option key={p.id} value={p.id}>
+                        {p.name} {p.child ? `(${p.child.name})` : ''}
+                    </option>
+                ))}
+            </select>
+
+            {parentId && (
+                <select
+                    value={seats}
+                    onChange={(e) => setSeats(Number(e.target.value))}
+                    className="rounded border border-[#D8DDD9] bg-white px-1.5 py-1 text-[#1B4332]"
+                >
+                    {[1, 2, 3, 4].map((n) => (
+                        <option key={n} value={n}>
+                            {n} ילדים
+                        </option>
+                    ))}
+                </select>
+            )}
+
+            <button
+                disabled={busy}
+                onClick={() => onOverride(shift, parentId ? Number(parentId) : null, seats)}
+                className="rounded bg-[#1B4332] px-2.5 py-1 text-white disabled:opacity-50"
+            >
+                שמירה
+            </button>
         </div>
     );
 }

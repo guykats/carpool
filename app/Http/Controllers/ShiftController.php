@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Child;
+use App\Models\ParentUser;
 use App\Models\Shift;
 use App\Support\ShiftWeek;
 use Carbon\Carbon;
@@ -46,6 +47,12 @@ class ShiftController extends Controller
             'weekStart' => $weekStart->format('Y-m-d'),
             'shifts' => $shifts,
             'scoreboard' => $this->scoreboard(),
+            // Only sent to admins - powers the inline shift-override
+            // controls on the board itself (see main.tsx). Regular parents
+            // don't need the full roster.
+            'parents' => $parent->is_admin
+                ? ParentUser::with('child:id,name')->orderBy('name')->get()
+                : [],
         ]);
     }
 

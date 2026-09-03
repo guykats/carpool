@@ -7,7 +7,6 @@ use App\Models\ParentUser;
 use App\Models\Setting;
 use App\Models\Shift;
 use App\Support\ShiftWeek;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -44,36 +43,11 @@ class AdminController extends Controller
     }
 
     /**
-     * Shift list for the admin override view - unlike ShiftController::index
-     * this is unrestricted: works for past weeks too (there's nothing in
-     * ShiftWeek::ensureGenerated that limits it to the future), which is
-     * what lets an admin retroactively fix a shift after the fact.
-     */
-    public function shiftsForWeek(Request $request)
-    {
-        $weekStart = $request->query('week')
-            ? Carbon::parse($request->query('week'))->startOfWeek(Carbon::SUNDAY)
-            : Carbon::now()->startOfWeek(Carbon::SUNDAY);
-
-        ShiftWeek::ensureGenerated($weekStart);
-
-        $shifts = Shift::with(['child', 'parent'])
-            ->whereBetween('date', [$weekStart->format('Y-m-d'), $weekStart->copy()->addDays(6)->format('Y-m-d')])
-            ->orderBy('date')
-            ->orderBy('time')
-            ->get()
-            ->map(fn (Shift $s) => ShiftWeek::present($s));
-
-        return response()->json([
-            'weekStart' => $weekStart->format('Y-m-d'),
-            'shifts' => $shifts,
-        ]);
-    }
-
-    /**
      * Admin override: assign, reassign or clear any shift regardless of
      * who currently holds it, including already-past shifts (PRD 4.2.3 /
-     * 4.3 / 4.4 - retroactive correction).
+     * 4.3 / 4.4 - retroactive correction). Called from the main board
+     * (main.tsx) when the viewer is an admin - see ShiftController::index,
+     * which includes the parents list only for admins.
      */
     public function overrideShift(Request $request, Shift $shift)
     {
