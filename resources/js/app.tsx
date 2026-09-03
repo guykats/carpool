@@ -1,7 +1,6 @@
 import { createInertiaApp, router } from '@inertiajs/react';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { initializeTheme } from '@/hooks/use-appearance';
 import { attachParentIdentityToRequests } from '@/lib/parentIdentity';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
@@ -29,5 +28,9 @@ void createInertiaApp({
     },
 });
 
-// This will set light / dark mode on load...
-initializeTheme();
+// No dark-mode support - this app only has a light palette (see
+// frontend-design decisions). Deliberately NOT calling initializeTheme()
+// here: it followed the OS's prefers-color-scheme and applied a `dark`
+// class to <html>, which made any text without an explicit color class
+// (e.g. the week-nav buttons) inherit a light/white foreground - invisible
+// against this app's white button backgrounds.

@@ -13,7 +13,7 @@ use Inertia\Response;
 
 class ShiftController extends Controller
 {
-    private const SLOT_TYPES = ['departure_1', 'departure_2', 'return_1', 'return_2'];
+    private const SLOT_TYPES = ['departure_1', 'departure_2', 'departure_3', 'return_1', 'return_2', 'return_3'];
     private const DAY_NAMES = [
         'Sunday' => 0, 'Monday' => 1, 'Tuesday' => 2, 'Wednesday' => 3,
         'Thursday' => 4, 'Friday' => 5, 'Saturday' => 6,
@@ -48,7 +48,7 @@ class ShiftController extends Controller
             ->map(fn (Shift $s) => $this->presentShift($s));
 
         return Inertia::render('main', [
-            'currentParent' => $parent,
+            'currentParent' => $parent->load('child'),
             'weekStart' => $weekStart->format('Y-m-d'),
             'shifts' => $shifts,
             'scoreboard' => $this->scoreboard(),

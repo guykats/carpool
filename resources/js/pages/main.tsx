@@ -5,7 +5,7 @@ type Shift = {
     id: number;
     date: string;
     time: string;
-    type: 'departure_1' | 'departure_2' | 'return_1' | 'return_2';
+    type: 'departure_1' | 'departure_2' | 'departure_3' | 'return_1' | 'return_2' | 'return_3';
     isPast: boolean;
     parentName: string | null;
     parentId: number | null;
@@ -16,13 +16,15 @@ type Shift = {
 
 type ScoreRow = { child_id: number; child_name: string; rides: number };
 
-type CurrentParent = { id: number; name: string; child_id: number };
+type CurrentParent = { id: number; name: string; child_id: number; child: { id: number; name: string } | null };
 
 const SLOT_LABELS: Record<Shift['type'], string> = {
     departure_1: 'הלוך – רכב 1',
     departure_2: 'הלוך – רכב 2',
+    departure_3: 'הלוך – רכב 3',
     return_1: 'חזור – רכב 1',
     return_2: 'חזור – רכב 2',
+    return_3: 'חזור – רכב 3',
 };
 
 const DAY_LABELS: Record<string, string> = {
@@ -99,22 +101,28 @@ export default function Main({
     return (
         <div dir="rtl" className="min-h-screen bg-[#F7F7F2] pb-10">
             <header className="sticky top-0 z-10 border-b border-[#D8DDD9] bg-[#1B4332] px-4 py-3 text-white shadow-sm">
-                <div className="mx-auto flex max-w-2xl items-center justify-between gap-3 overflow-x-auto">
-                    {scoreboard.length === 0 && <span className="text-sm text-white/70">עדיין אין נסיעות שבוצעו</span>}
-                    {scoreboard.map((row) => (
-                        <div key={row.child_id} className="flex shrink-0 flex-col items-center px-2">
-                            <span className="flex items-center gap-1 text-xs text-white/85">
-                                <span
-                                    className="inline-block h-2 w-2 rounded-full"
-                                    style={{ backgroundColor: childColor(row.child_id) }}
-                                />
-                                {row.child_name}
-                            </span>
-                            <span className="text-lg font-bold" style={{ color: childColor(row.child_id) }}>
-                                {row.rides}
-                            </span>
-                        </div>
-                    ))}
+                <div className="mx-auto flex max-w-2xl items-center justify-between gap-3">
+                    <div className="shrink-0 text-sm font-medium">
+                        שלום {currentParent.name}
+                        {currentParent.child?.name ? `, הורה של ${currentParent.child.name}` : ''}
+                    </div>
+                    <div className="flex items-center gap-3 overflow-x-auto">
+                        {scoreboard.length === 0 && <span className="text-sm text-white/70">עדיין אין נסיעות שבוצעו</span>}
+                        {scoreboard.map((row) => (
+                            <div key={row.child_id} className="flex shrink-0 flex-col items-center px-2">
+                                <span className="flex items-center gap-1 text-xs text-white/85">
+                                    <span
+                                        className="inline-block h-2 w-2 rounded-full"
+                                        style={{ backgroundColor: childColor(row.child_id) }}
+                                    />
+                                    {row.child_name}
+                                </span>
+                                <span className="text-lg font-bold" style={{ color: childColor(row.child_id) }}>
+                                    {row.rides}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </header>
 
@@ -124,11 +132,17 @@ export default function Main({
                 )}
 
                 <div className="mb-4 flex items-center justify-between">
-                    <button onClick={() => changeWeek(-7)} className="rounded-lg bg-white px-3 py-1.5 text-sm shadow-sm">
+                    <button
+                        onClick={() => changeWeek(-7)}
+                        className="rounded-lg bg-white px-3 py-1.5 text-sm text-[#1B4332] shadow-sm"
+                    >
                         → שבוע קודם
                     </button>
                     <span className="text-sm font-medium text-[#5C6B66]">שבוע {weekStart}</span>
-                    <button onClick={() => changeWeek(7)} className="rounded-lg bg-white px-3 py-1.5 text-sm shadow-sm">
+                    <button
+                        onClick={() => changeWeek(7)}
+                        className="rounded-lg bg-white px-3 py-1.5 text-sm text-[#1B4332] shadow-sm"
+                    >
                         שבוע הבא ←
                     </button>
                 </div>
