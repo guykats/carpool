@@ -91,14 +91,14 @@ export default function Admin({
 
                 <section className="rounded-2xl bg-white p-4 shadow-sm">
                     <h2 className="mb-3 font-semibold text-[#1B4332]">הגדרות חוג</h2>
-                    <div className="mb-3 flex items-center gap-4 text-sm">
+                    <div className="mb-3 flex items-center gap-4 text-sm text-[#1B4332]">
                         <label className="flex items-center gap-2">
                             שעת הלוך
                             <input
                                 type="time"
                                 value={departure}
                                 onChange={(e) => setDeparture(e.target.value)}
-                                className="rounded-lg border border-[#D8DDD9] px-2 py-1"
+                                className="rounded-lg border border-[#D8DDD9] px-2 py-1 text-[#1B4332]"
                             />
                         </label>
                         <label className="flex items-center gap-2">
@@ -107,7 +107,7 @@ export default function Admin({
                                 type="time"
                                 value={returnTime}
                                 onChange={(e) => setReturnTime(e.target.value)}
-                                className="rounded-lg border border-[#D8DDD9] px-2 py-1"
+                                className="rounded-lg border border-[#D8DDD9] px-2 py-1 text-[#1B4332]"
                             />
                         </label>
                     </div>
