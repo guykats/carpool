@@ -14,35 +14,57 @@ return new class extends Migration
      * driver - swapping via a temporary plain-string column works
      * identically on both SQLite (dev) and MySQL (prod) without needing
      * doctrine/dbal, and preserves existing shift rows.
+     *
+     * Every step is idempotent/state-checked: this failed once on
+     * production because MySQL (unlike SQLite) refuses to drop a column
+     * that's still part of a composite unique index - the fix is to drop
+     * that index explicitly first. Since the failure left `type_new`
+     * already added and populated (nothing lost, just stuck mid-way),
+     * this version safely re-runs from whatever state it's in.
      */
     public function up(): void
     {
-        Schema::table('shifts', function (Blueprint $table) {
-            $table->string('type_new', 20)->nullable()->after('type');
-        });
+        if (! Schema::hasColumn('shifts', 'type_new')) {
+            Schema::table('shifts', function (Blueprint $table) {
+                $table->string('type_new', 20)->nullable()->after('type');
+            });
+        }
 
-        DB::statement('UPDATE shifts SET type_new = type');
+        if (Schema::hasColumn('shifts', 'type')) {
+            DB::statement('UPDATE shifts SET type_new = type WHERE type_new IS NULL');
+        }
 
-        Schema::table('shifts', function (Blueprint $table) {
-            $table->dropColumn('type');
-        });
+        if (Schema::hasColumn('shifts', 'type')) {
+            try {
+                Schema::table('shifts', function (Blueprint $table) {
+                    $table->dropUnique(['date', 'type']);
+                });
+            } catch (\Throwable $e) {
+                // Index already gone - fine.
+            }
 
-        Schema::table('shifts', function (Blueprint $table) {
-            $table->renameColumn('type_new', 'type');
-        });
+            Schema::table('shifts', function (Blueprint $table) {
+                $table->dropColumn('type');
+            });
+        }
 
-        // Dropping the original `type` column also drops the composite
-        // unique index defined on it in the original migration
-        // (date+type) - recreate it, or duplicate shift generation could
-        // slip through the on-demand generator's firstOrCreate() guard.
-        Schema::table('shifts', function (Blueprint $table) {
-            $table->unique(['date', 'type']);
-        });
+        if (! Schema::hasColumn('shifts', 'type') && Schema::hasColumn('shifts', 'type_new')) {
+            Schema::table('shifts', function (Blueprint $table) {
+                $table->renameColumn('type_new', 'type');
+            });
+        }
+
+        try {
+            Schema::table('shifts', function (Blueprint $table) {
+                $table->unique(['date', 'type']);
+            });
+        } catch (\Throwable $e) {
+            // Already exists - fine.
+        }
     }
 
     public function down(): void
     {
-        // Not meaningfully reversible without first deleting any
-        // departure_3/return_3 rows - left as a manual step if ever needed.
+        // Not meaningfully reversible.
     }
 };
