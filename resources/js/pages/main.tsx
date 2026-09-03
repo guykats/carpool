@@ -47,6 +47,14 @@ function childColor(childId: number): string {
     return CHILD_COLORS[(childId - 1) % CHILD_COLORS.length];
 }
 
+function childColorWithOpacity(childId: number, opacity: number): string {
+    const hex = childColor(childId).replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+}
+
 function csrfToken() {
     return document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? '';
 }
@@ -221,6 +229,7 @@ export default function Main({
                                     <li
                                         key={shift.id}
                                         className="border-b border-[#F0F0EC] px-4 py-3 last:border-0"
+                                        style={shift.childId ? { backgroundColor: childColorWithOpacity(shift.childId, 0.7) } : undefined}
                                     >
                                         <div className="flex items-center justify-between">
                                         <div>
