@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Child;
-use App\Models\Setting;
 use App\Models\Shift;
+use App\Support\ShiftWeek;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -13,12 +13,6 @@ use Inertia\Response;
 
 class ShiftController extends Controller
 {
-    private const SLOT_TYPES = ['departure_1', 'departure_2', 'departure_3', 'return_1', 'return_2', 'return_3'];
-    private const DAY_NAMES = [
-        'Sunday' => 0, 'Monday' => 1, 'Tuesday' => 2, 'Wednesday' => 3,
-        'Thursday' => 4, 'Friday' => 5, 'Saturday' => 6,
-    ];
-
     /**
      * Main parent view. `week` is an optional Y-m-d date inside the target
      * week; defaults to the current week. Shifts for that week are
@@ -38,14 +32,14 @@ class ShiftController extends Controller
             ? Carbon::parse($request->query('week'))->startOfWeek(Carbon::SUNDAY)
             : Carbon::now()->startOfWeek(Carbon::SUNDAY);
 
-        $this->ensureWeekGenerated($weekStart);
+        ShiftWeek::ensureGenerated($weekStart);
 
         $shifts = Shift::with(['child', 'parent'])
             ->whereBetween('date', [$weekStart->format('Y-m-d'), $weekStart->copy()->addDays(6)->format('Y-m-d')])
             ->orderBy('date')
             ->orderBy('time')
             ->get()
-            ->map(fn (Shift $s) => $this->presentShift($s));
+            ->map(fn (Shift $s) => ShiftWeek::present($s));
 
         return Inertia::render('main', [
             'currentParent' => $parent->load('child'),
@@ -83,13 +77,9 @@ class ShiftController extends Controller
             return response()->json(['error' => 'This slot was just taken. Refreshing the board.'], 409);
         }
 
-        return response()->json(['shift' => $this->presentShift($shift->fresh(['child', 'parent']))]);
+        return response()->json(['shift' => ShiftWeek::present($shift->fresh(['child', 'parent']))]);
     }
 
-    /**
-     * A parent may only cancel their own shift (admin override lives in
-     * AdminController).
-     */
     /**
      * A parent may cancel a shift if it belongs to their own child -
      * regardless of which parent record actually made the booking (e.g.
@@ -104,30 +94,7 @@ class ShiftController extends Controller
 
         $shift->update(['parent_id' => null, 'child_id' => null, 'seats' => null]);
 
-        return response()->json(['shift' => $this->presentShift($shift->fresh())]);
-    }
-
-    private function ensureWeekGenerated(Carbon $weekStart): void
-    {
-        $settings = Setting::current();
-
-        foreach ($settings->days as $dayName) {
-            $offset = self::DAY_NAMES[$dayName] ?? null;
-            if ($offset === null) {
-                continue;
-            }
-
-            $date = $weekStart->copy()->addDays($offset)->format('Y-m-d');
-
-            foreach (self::SLOT_TYPES as $type) {
-                $time = str_starts_with($type, 'departure') ? $settings->departure_time : $settings->return_time;
-
-                Shift::firstOrCreate(
-                    ['date' => $date, 'type' => $type],
-                    ['time' => $time]
-                );
-            }
-        }
+        return response()->json(['shift' => ShiftWeek::present($shift->fresh())]);
     }
 
     /**
@@ -154,21 +121,5 @@ class ShiftController extends Controller
             ->sortByDesc('rides')
             ->values()
             ->toArray();
-    }
-
-    private function presentShift(Shift $shift): array
-    {
-        return [
-            'id' => $shift->id,
-            'date' => $shift->date->format('Y-m-d'),
-            'time' => substr($shift->time, 0, 5),
-            'type' => $shift->type,
-            'isPast' => $shift->isPast(),
-            'parentName' => $shift->parent?->name,
-            'parentId' => $shift->parent_id,
-            'childId' => $shift->child_id,
-            'childName' => $shift->child?->name,
-            'seats' => $shift->seats,
-        ];
     }
 }

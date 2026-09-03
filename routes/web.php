@@ -29,6 +29,7 @@ Route::middleware('identify.parent')->group(function () {
     // --- Admin panel ---
     Route::middleware('ensure.admin')->prefix('admin')->group(function () {
         Route::get('/', [AdminController::class, 'index'])->name('admin');
+        Route::get('/shifts', [AdminController::class, 'shiftsForWeek']);
         Route::post('/children', [AdminController::class, 'storeChild']);
         Route::post('/parents/{parent}/reassign', [AdminController::class, 'reassignParent']);
         Route::post('/shifts/{shift}/override', [AdminController::class, 'overrideShift']);
