@@ -137,7 +137,8 @@ export default function Main({
                         </div>
                         <ul>
                             {dayShifts.map((shift) => {
-                                const isMine = shift.parentId === currentParent.id;
+                                const isMyBooking = shift.parentId === currentParent.id;
+                                const isMyChild = shift.childId === currentParent.child_id;
                                 return (
                                     <li
                                         key={shift.id}
@@ -167,7 +168,7 @@ export default function Main({
                                         </div>
 
                                         <div className="flex items-center gap-2">
-                                            {isMine && !shift.isPast && (
+                                            {isMyBooking && !shift.isPast && (
                                                 <a
                                                     href={googleCalendarUrl(shift)}
                                                     target="_blank"
@@ -186,7 +187,7 @@ export default function Main({
                                                     אני מסיע
                                                 </button>
                                             )}
-                                            {isMine && !shift.isPast && (
+                                            {isMyChild && shift.parentName && !shift.isPast && (
                                                 <button
                                                     disabled={busyId === shift.id}
                                                     onClick={() => act(shift, 'cancel')}

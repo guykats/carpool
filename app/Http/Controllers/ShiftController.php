@@ -81,11 +81,17 @@ class ShiftController extends Controller
      * A parent may only cancel their own shift (admin override lives in
      * AdminController).
      */
+    /**
+     * A parent may cancel a shift if it belongs to their own child -
+     * regardless of which parent record actually made the booking (e.g.
+     * either parent of the same child can cancel the other's booking).
+     * Admin override lives in AdminController.
+     */
     public function cancel(Request $request, Shift $shift)
     {
         $parent = $request->attributes->get('currentParent');
         abort_if(! $parent, 401);
-        abort_if($shift->parent_id !== $parent->id, 403, 'You can only cancel your own shift.');
+        abort_if($shift->child_id !== $parent->child_id, 403, 'You can only cancel shifts for your own child.');
 
         $shift->update(['parent_id' => null, 'child_id' => null]);
 
