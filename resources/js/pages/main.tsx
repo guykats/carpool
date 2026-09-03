@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { router } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import { getParentUuid } from '../lib/parentIdentity';
 
 type Shift = {
@@ -17,7 +17,13 @@ type Shift = {
 
 type ScoreRow = { child_id: number; child_name: string; rides: number };
 
-type CurrentParent = { id: number; name: string; child_id: number; child: { id: number; name: string } | null };
+type CurrentParent = {
+    id: number;
+    name: string;
+    child_id: number;
+    child: { id: number; name: string } | null;
+    is_admin: boolean;
+};
 
 const SLOT_LABELS: Record<Shift['type'], string> = {
     departure_1: 'הלוך – רכב 1',
@@ -243,6 +249,17 @@ export default function Main({
                     </div>
                 ))}
             </div>
+
+            {currentParent.is_admin && (
+                <Link
+                    href="/admin"
+                    className="fixed bottom-6 left-6 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-[#1B4332] text-2xl text-white shadow-lg transition hover:bg-[#163A2B]"
+                    aria-label="פאנל ניהול"
+                    title="פאנל ניהול"
+                >
+                    ⚙️
+                </Link>
+            )}
         </div>
     );
 }
