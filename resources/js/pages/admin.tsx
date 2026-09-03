@@ -15,11 +15,15 @@ function parentUuidHeader() {
 }
 
 async function post(url: string, body: unknown) {
-    await fetch(url, {
+    const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken(), ...parentUuidHeader() },
         body: JSON.stringify(body),
     });
+    if (!res.ok) {
+        alert(`השמירה נכשלה (שגיאה ${res.status}). נסו לרענן את הדף ולנסות שוב.`);
+        return;
+    }
     router.reload();
 }
 

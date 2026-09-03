@@ -96,6 +96,9 @@ export default function Main({
             });
             if (res.status === 409) {
                 setNotice('המשבצת נתפסה, מרעננים את הלוח...');
+            } else if (!res.ok) {
+                setNotice(`הפעולה נכשלה (שגיאה ${res.status}), נסו לרענן ולנסות שוב.`);
+                return;
             }
             router.reload({ only: ['shifts', 'scoreboard'] });
         } finally {
@@ -106,11 +109,15 @@ export default function Main({
     async function adminOverride(shift: Shift, parentId: number | null, seats: number) {
         setBusyId(shift.id);
         try {
-            await fetch(`/admin/shifts/${shift.id}/override`, {
+            const res = await fetch(`/admin/shifts/${shift.id}/override`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken(), ...parentUuidHeader() },
                 body: JSON.stringify({ parent_id: parentId, seats }),
             });
+            if (!res.ok) {
+                setNotice(`השמירה נכשלה (שגיאה ${res.status}), נסו לרענן ולנסות שוב.`);
+                return;
+            }
             router.reload({ only: ['shifts', 'scoreboard'] });
         } finally {
             setBusyId(null);
@@ -120,11 +127,15 @@ export default function Main({
     async function adminSetTime(shift: Shift, time: string) {
         setBusyId(shift.id);
         try {
-            await fetch(`/admin/shifts/${shift.id}/time`, {
+            const res = await fetch(`/admin/shifts/${shift.id}/time`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken(), ...parentUuidHeader() },
                 body: JSON.stringify({ time }),
             });
+            if (!res.ok) {
+                setNotice(`השמירה נכשלה (שגיאה ${res.status}), נסו לרענן ולנסות שוב.`);
+                return;
+            }
             router.reload({ only: ['shifts', 'scoreboard'] });
         } finally {
             setBusyId(null);
