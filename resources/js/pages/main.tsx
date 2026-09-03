@@ -173,12 +173,12 @@ export default function Main({
     return (
         <div dir="rtl" className="min-h-screen bg-[#F7F7F2] pb-10">
             <header className="sticky top-0 z-10 border-b border-[#D8DDD9] bg-[#1B4332] px-4 py-3 text-white shadow-sm">
-                <div className="mx-auto flex max-w-2xl items-center justify-between gap-3">
-                    <div className="shrink-0 text-sm font-medium">שלום {currentParent.name}</div>
-                    <div className="flex items-center gap-3 overflow-x-auto">
+                <div className="mx-auto flex max-w-2xl flex-col gap-2">
+                    <div className="text-sm font-medium">שלום {currentParent.name}</div>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                         {scoreboard.length === 0 && <span className="text-sm text-white/70">עדיין אין נסיעות שבוצעו</span>}
                         {scoreboard.map((row) => (
-                            <div key={row.child_id} className="flex shrink-0 flex-col items-center px-2">
+                            <div key={row.child_id} className="flex flex-col items-center px-1">
                                 <span className="flex items-center gap-1 text-xs text-white/85">
                                     <span
                                         className="inline-block h-2 w-2 rounded-full"
