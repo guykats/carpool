@@ -23,6 +23,16 @@ async function post(url: string, body: unknown) {
     router.reload();
 }
 
+const DAYS: { value: string; label: string }[] = [
+    { value: 'Sunday', label: 'ראשון' },
+    { value: 'Monday', label: 'שני' },
+    { value: 'Tuesday', label: 'שלישי' },
+    { value: 'Wednesday', label: 'רביעי' },
+    { value: 'Thursday', label: 'חמישי' },
+    { value: 'Friday', label: 'שישי' },
+    { value: 'Saturday', label: 'שבת' },
+];
+
 export default function Admin({
     children,
     parents,
@@ -35,6 +45,11 @@ export default function Admin({
     const [newChild, setNewChild] = useState('');
     const [departure, setDeparture] = useState(settings.departure_time);
     const [returnTime, setReturnTime] = useState(settings.return_time);
+    const [selectedDays, setSelectedDays] = useState<string[]>(settings.days);
+
+    function toggleDay(value: string) {
+        setSelectedDays((prev) => (prev.includes(value) ? prev.filter((d) => d !== value) : [...prev, value]));
+    }
 
     return (
         <div dir="rtl" className="min-h-screen bg-[#F7F7F2] px-4 py-6">
@@ -91,6 +106,26 @@ export default function Admin({
 
                 <section className="rounded-2xl bg-white p-4 shadow-sm">
                     <h2 className="mb-3 font-semibold text-[#1B4332]">הגדרות חוג</h2>
+                    <p className="mb-2 text-sm font-medium text-[#1B4332]">ימי חוג</p>
+                    <div className="mb-4 flex flex-wrap gap-2">
+                        {DAYS.map((day) => {
+                            const checked = selectedDays.includes(day.value);
+                            return (
+                                <button
+                                    key={day.value}
+                                    type="button"
+                                    onClick={() => toggleDay(day.value)}
+                                    className={
+                                        checked
+                                            ? 'rounded-full border border-[#1B4332] bg-[#1B4332] px-3 py-1.5 text-xs text-white'
+                                            : 'rounded-full border border-[#D8DDD9] bg-white px-3 py-1.5 text-xs text-[#1B4332]'
+                                    }
+                                >
+                                    {day.label}
+                                </button>
+                            );
+                        })}
+                    </div>
                     <div className="mb-3 flex items-center gap-4 text-sm text-[#1B4332]">
                         <label className="flex items-center gap-2">
                             שעת הלוך
@@ -113,14 +148,15 @@ export default function Admin({
                     </div>
                     <button
                         onClick={() =>
-                            post('/admin/settings', { days: settings.days, departure_time: departure, return_time: returnTime })
+                            post('/admin/settings', { days: selectedDays, departure_time: departure, return_time: returnTime })
                         }
                         className="rounded-lg bg-[#1B4332] px-3 py-1.5 text-sm text-white"
                     >
                         שמירה
                     </button>
                     <p className="mt-2 text-xs text-[#5C6B66]">
-                        לשינוי שעה חד-פעמית ליום ספציפי: יש לערוך את המשבצת הבודדת בלוח (רשימת ה-Shifts מתחת), לא כאן.
+                        שינוי הימים משפיע רק על שבועות חדשים שייווצרו (ראו PRD - יצירה on-demand). לשינוי שעה חד-פעמית ליום
+                        ספציפי: יש לערוך את המשבצת הבודדת בלוח (רשימת ה-Shifts מתחת), לא כאן.
                     </p>
                 </section>
             </div>
