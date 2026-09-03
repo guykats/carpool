@@ -79,6 +79,20 @@ export default function Main({
     const [busyId, setBusyId] = useState<number | null>(null);
     const [notice, setNotice] = useState<string | null>(null);
     const [seatsChoice, setSeatsChoice] = useState<Record<number, number>>({});
+    // Admin edit mode: when off, an admin sees the board exactly like any
+    // other parent (no inline override controls). Persisted so it doesn't
+    // reset on every visit.
+    const [editMode, setEditMode] = useState<boolean>(
+        () => typeof window !== 'undefined' && localStorage.getItem('carpool_admin_edit_mode') === '1'
+    );
+
+    function toggleEditMode() {
+        setEditMode((prev) => {
+            const next = !prev;
+            localStorage.setItem('carpool_admin_edit_mode', next ? '1' : '0');
+            return next;
+        });
+    }
 
     const byDate = shifts.reduce<Record<string, Shift[]>>((acc, s) => {
         (acc[s.date] ??= []).push(s);
@@ -152,10 +166,7 @@ export default function Main({
         <div dir="rtl" className="min-h-screen bg-[#F7F7F2] pb-10">
             <header className="sticky top-0 z-10 border-b border-[#D8DDD9] bg-[#1B4332] px-4 py-3 text-white shadow-sm">
                 <div className="mx-auto flex max-w-2xl items-center justify-between gap-3">
-                    <div className="shrink-0 text-sm font-medium">
-                        שלום {currentParent.name}
-                        {currentParent.child?.name ? `, הורה של ${currentParent.child.name}` : ''}
-                    </div>
+                    <div className="shrink-0 text-sm font-medium">שלום {currentParent.name}</div>
                     <div className="flex items-center gap-3 overflow-x-auto">
                         {scoreboard.length === 0 && <span className="text-sm text-white/70">עדיין אין נסיעות שבוצעו</span>}
                         {scoreboard.map((row) => (
@@ -288,7 +299,7 @@ export default function Main({
                                         </div>
                                         </div>
 
-                                        {currentParent.is_admin && (
+                                        {currentParent.is_admin && editMode && (
                                             <AdminOverrideControls
                                                 shift={shift}
                                                 parents={parents}
@@ -304,6 +315,28 @@ export default function Main({
                     </div>
                 ))}
             </div>
+
+            {currentParent.is_admin && (
+                <button
+                    onClick={toggleEditMode}
+                    className={
+                        'fixed bottom-24 left-6 z-20 flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold shadow-lg transition ' +
+                        (editMode ? 'bg-[#E8A33D] text-white' : 'bg-white text-[#1B4332]')
+                    }
+                    aria-label="מצב עריכת משבצות"
+                    title="מצב עריכת משבצות"
+                >
+                    <span
+                        className={
+                            'flex h-5 w-9 items-center rounded-full px-0.5 transition ' +
+                            (editMode ? 'justify-end bg-white/40' : 'justify-start bg-[#D8DDD9]')
+                        }
+                    >
+                        <span className="h-4 w-4 rounded-full bg-white shadow" />
+                    </span>
+                    מצב עריכה {editMode ? 'פועל' : 'כבוי'}
+                </button>
+            )}
 
             {currentParent.is_admin && (
                 <Link
