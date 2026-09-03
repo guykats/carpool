@@ -229,7 +229,7 @@ export default function Main({
                                     <li
                                         key={shift.id}
                                         className="border-b border-[#F0F0EC] px-4 py-3 last:border-0"
-                                        style={shift.childId ? { backgroundColor: childColorWithOpacity(shift.childId, 0.7) } : undefined}
+                                        style={shift.childId ? { backgroundColor: childColorWithOpacity(shift.childId, 0.1) } : undefined}
                                     >
                                         <div className="flex items-center justify-between">
                                         <div>
