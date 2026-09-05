@@ -38,14 +38,35 @@ jobs:
 
       - name: Trigger the webhook
         run: |
-          response=$(curl -s -w "\n%{http_code}" -X POST \
-            --max-time 150 \
-            "${{ secrets.DEPLOY_WEBHOOK_URL }}")
-          http_code=$(echo "$response" | tail -n1)
-          body=$(echo "$response" | sed '$d')
-          echo "HTTP status: $http_code"
-          echo "Response body: $body"
-          if [ "$http_code" -ne 200 ]; then
-            echo "Webhook call failed"
+          # Hostinger appears to intermittently drop connections from
+          # GitHub Actions' cloud-datacenter IP ranges (confirmed: the same
+          # call succeeds instantly when made from the server itself), so
+          # retry a few times with backoff before giving up.
+          max_attempts=4
+          attempt=1
+          success=false
+
+          while [ $attempt -le $max_attempts ]; do
+            echo "Attempt $attempt of $max_attempts..."
+            response=$(curl -s -w "\n%{http_code}" -X POST \
+              --max-time 60 \
+              "${{ secrets.DEPLOY_WEBHOOK_URL }}")
+            http_code=$(echo "$response" | tail -n1)
+            body=$(echo "$response" | sed '$d')
+            echo "HTTP status: $http_code"
+            echo "Response body: $body"
+
+            if [ "$http_code" -eq 200 ]; then
+              success=true
+              break
+            fi
+
+            echo "Attempt $attempt failed, waiting before retry..."
+            sleep $((attempt * 10))
+            attempt=$((attempt + 1))
+          done
+
+          if [ "$success" != "true" ]; then
+            echo "Webhook call failed after $max_attempts attempts"
             exit 1
           fi
