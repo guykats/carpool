@@ -3,7 +3,12 @@ import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { attachParentIdentityToRequests } from '@/lib/parentIdentity';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+// VITE_APP_NAME is a build-time Vite variable, but the CI build step
+// (npm run build in GitHub Actions) has no .env file at all - it always
+// fell back to 'Laravel' regardless of what the server's runtime .env
+// says. Hardcoded directly instead, since this app doesn't need
+// multi-environment configurability for its title.
+const appName = 'הסעות לחוג';
 
 // This app has no cookie/session auth - identity is a UUID in LocalStorage,
 // sent on every Inertia visit as X-Parent-Uuid. See PRD section 4.1.
