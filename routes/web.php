@@ -10,6 +10,24 @@ use Illuminate\Support\Facades\Route;
 // --- Public deploy webhook (see stackandhostingerdeploy.md) ---
 Route::post('/deploy-webhook', DeployWebhookController::class);
 
+// --- Temporary diagnostic route - remove after debugging the "asks to
+// re-identify" report. Shows exactly what the server sees, no devtools
+// needed (useful on mobile). ---
+Route::get('/debug-identity', function (\Illuminate\Http\Request $request) {
+    $cookieUuid = $request->cookie('carpool_parent_uuid');
+    $headerUuid = $request->header('X-Parent-Uuid');
+    $uuid = $cookieUuid ?? $headerUuid;
+    $parent = $uuid ? \App\Models\ParentUser::where('uuid', $uuid)->first() : null;
+
+    return response()->json([
+        'cookie_received' => $cookieUuid,
+        'header_received' => $headerUuid,
+        'uuid_used' => $uuid,
+        'matched_parent' => $parent ? ['id' => $parent->id, 'name' => $parent->name, 'is_admin' => $parent->is_admin] : null,
+        'all_cookies_seen' => array_keys($request->cookies->all()),
+    ]);
+});
+
 // --- Identity ---
 Route::get('/login', [ParentController::class, 'create'])->name('login');
 Route::post('/parents', [ParentController::class, 'store']);
