@@ -173,7 +173,7 @@ export default function Main({
             <header className="sticky top-0 z-10 border-b border-[#D8DDD9] bg-[#1B4332] px-4 py-3 text-white shadow-sm">
                 <div className="mx-auto flex max-w-2xl flex-col gap-2">
                     <div className="text-sm font-medium">
-                        היי{currentParent.family?.name ? `, ${currentParent.family.name}` : ''}
+                        היי{currentParent.family?.name ? ` ${currentParent.family.name}` : ''}
                     </div>
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                         {scoreboard.length === 0 && <span className="text-sm text-white/70">עדיין אין נסיעות שבוצעו</span>}
