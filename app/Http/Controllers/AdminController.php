@@ -68,7 +68,7 @@ class AdminController extends Controller
     {
         $data = $request->validate([
             'parent_id' => ['nullable', 'exists:parents,id'],
-            'seats' => ['nullable', 'integer', 'min:1', 'max:4'],
+            'seats' => ['nullable', 'integer', 'min:2', 'max:4'],
         ]);
 
         $familyId = $data['parent_id'] ? ParentUser::find($data['parent_id'])->family_id : null;
@@ -76,7 +76,7 @@ class AdminController extends Controller
         $shift->update([
             'parent_id' => $data['parent_id'] ?? null,
             'family_id' => $familyId,
-            'seats' => $data['parent_id'] ? ($data['seats'] ?? 1) : null,
+            'seats' => $data['parent_id'] ? ($data['seats'] ?? 2) : null,
         ]);
 
         return response()->json(['shift' => ShiftWeek::present($shift->fresh(['family', 'parent']))]);

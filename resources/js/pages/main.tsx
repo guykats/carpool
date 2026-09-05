@@ -277,22 +277,22 @@ export default function Main({
                                             {!shift.familyName && !shift.isPast && (
                                                 <>
                                                     <select
-                                                        value={seatsChoice[shift.id] ?? 1}
+                                                        value={seatsChoice[shift.id] ?? 2}
                                                         onChange={(e) =>
                                                             setSeatsChoice((prev) => ({ ...prev, [shift.id]: Number(e.target.value) }))
                                                         }
                                                         className="rounded-lg border border-[#D8DDD9] bg-white px-2 py-1.5 text-xs text-[#1B4332]"
                                                         aria-label="כמה ילדים לוקחים"
                                                     >
-                                                        {[1, 2, 3, 4].map((n) => (
+                                                        {[2, 3, 4].map((n) => (
                                                             <option key={n} value={n}>
-                                                                {n === 1 ? 'ילד אחד' : `${n} ילדים`}
+                                                                {n} ילדים
                                                             </option>
                                                         ))}
                                                     </select>
                                                     <button
                                                         disabled={busyId === shift.id}
-                                                        onClick={() => act(shift, 'assign', seatsChoice[shift.id] ?? 1)}
+                                                        onClick={() => act(shift, 'assign', seatsChoice[shift.id] ?? 2)}
                                                         className="rounded-lg bg-[#E8A33D] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
                                                     >
                                                         אני מסיע
@@ -385,7 +385,7 @@ function AdminOverrideControls({
     onSetTime: (shift: Shift, time: string) => void;
 }) {
     const [parentId, setParentId] = useState<string>(shift.parentId?.toString() ?? '');
-    const [seats, setSeats] = useState(shift.seats ?? 1);
+    const [seats, setSeats] = useState(shift.seats ?? 2);
     const [time, setTime] = useState(shift.time);
 
     return (
@@ -419,7 +419,7 @@ function AdminOverrideControls({
                     onChange={(e) => setSeats(Number(e.target.value))}
                     className="rounded border border-[#D8DDD9] bg-white px-1.5 py-1 text-[#1B4332]"
                 >
-                    {[1, 2, 3, 4].map((n) => (
+                    {[2, 3, 4].map((n) => (
                         <option key={n} value={n}>
                             {n} ילדים
                         </option>
