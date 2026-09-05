@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Child;
 use App\Models\DeviceLink;
+use App\Models\Family;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -35,7 +35,7 @@ class PairingController extends Controller
 
         return Inertia::render('pairing', [
             'token' => $token,
-            'children' => Child::orderBy('name')->get(['id', 'name']),
+            'families' => Family::orderBy('name')->get(['id', 'name']),
         ]);
     }
 

@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Link, router } from '@inertiajs/react';
 import { getParentUuid } from '../lib/parentIdentity';
 
-type Child = { id: number; name: string };
-type ParentRow = { id: number; name: string; is_admin: boolean; child: Child | null };
+type Family = { id: number; name: string };
+type ParentRow = { id: number; is_admin: boolean; family: Family | null };
 type Settings = { days: string[]; departure_time: string; return_time: string };
 
 function csrfToken() {
@@ -38,15 +38,15 @@ const DAYS: { value: string; label: string }[] = [
 ];
 
 export default function Admin({
-    children,
+    families,
     parents,
     settings,
 }: {
-    children: Child[];
+    families: Family[];
     parents: ParentRow[];
     settings: Settings;
 }) {
-    const [newChild, setNewChild] = useState('');
+    const [newFamily, setNewFamily] = useState('');
     const [departure, setDeparture] = useState(settings.departure_time);
     const [returnTime, setReturnTime] = useState(settings.return_time);
     const [selectedDays, setSelectedDays] = useState<string[]>(settings.days);
@@ -66,20 +66,20 @@ export default function Admin({
                 </div>
 
                 <section className="rounded-2xl bg-white p-4 shadow-sm">
-                    <h2 className="mb-3 font-semibold text-[#1B4332]">רשימת ילדים</h2>
+                    <h2 className="mb-3 font-semibold text-[#1B4332]">רשימת משפחות</h2>
                     <ul className="mb-3 space-y-1 text-sm">
-                        {children.map((c) => (
-                            <li key={c.id} className="flex items-center justify-between text-[#5C6B66]">
-                                <span>{c.name}</span>
+                        {families.map((f) => (
+                            <li key={f.id} className="flex items-center justify-between text-[#5C6B66]">
+                                <span>{f.name}</span>
                                 <button
                                     onClick={() => {
                                         if (
                                             confirm(
-                                                `למחוק את ${c.name}? הורים ששויכו אליו/ה יהפכו ל"ללא שיוך", ` +
-                                                    'וההיסטוריה שלו/ה תיעלם מהסטטוס בהדר. הפעולה לא הפיכה.'
+                                                `למחוק את משפחת ${f.name}? מכשירים ששויכו אליה יהפכו ל"ללא שיוך", ` +
+                                                    'וההיסטוריה שלה תיעלם מהסטטוס בהדר. הפעולה לא הפיכה.'
                                             )
                                         ) {
-                                            post(`/admin/children/${c.id}/delete`, {});
+                                            post(`/admin/families/${f.id}/delete`, {});
                                         }
                                     }}
                                     className="text-xs text-red-600 underline"
@@ -91,13 +91,13 @@ export default function Admin({
                     </ul>
                     <div className="flex gap-2">
                         <input
-                            value={newChild}
-                            onChange={(e) => setNewChild(e.target.value)}
-                            placeholder="שם ילד/ה חדש/ה"
+                            value={newFamily}
+                            onChange={(e) => setNewFamily(e.target.value)}
+                            placeholder="שם משפחה חדשה"
                             className="flex-1 rounded-lg border border-[#D8DDD9] px-3 py-1.5 text-sm text-[#1B4332]"
                         />
                         <button
-                            onClick={() => newChild.trim() && post('/admin/children', { name: newChild })}
+                            onClick={() => newFamily.trim() && post('/admin/families', { name: newFamily })}
                             className="rounded-lg bg-[#1B4332] px-3 py-1.5 text-sm text-white"
                         >
                             הוספה
@@ -106,22 +106,25 @@ export default function Admin({
                 </section>
 
                 <section className="rounded-2xl bg-white p-4 shadow-sm">
-                    <h2 className="mb-3 font-semibold text-[#1B4332]">שיוך הורים לילדים</h2>
+                    <h2 className="mb-3 font-semibold text-[#1B4332]">שיוך מכשירים למשפחות</h2>
+                    <p className="mb-3 text-xs text-[#5C6B66]">
+                        כל שורה היא מכשיר/דפדפן שהתחבר לאתר (ייתכנו כמה מכשירים לאותה משפחה - למשל טלפון של כל הורה).
+                    </p>
                     <ul className="space-y-2">
                         {parents.map((p) => (
                             <li key={p.id} className="flex items-center justify-between text-sm">
                                 <span className="text-[#1B4332]">
-                                    {p.name} {p.is_admin && <span className="text-xs text-[#E8A33D]">(אדמין)</span>}
+                                    מכשיר #{p.id} {p.is_admin && <span className="text-xs text-[#E8A33D]">(אדמין)</span>}
                                 </span>
                                 <select
-                                    defaultValue={p.child?.id ?? ''}
-                                    onChange={(e) => post(`/admin/parents/${p.id}/reassign`, { child_id: Number(e.target.value) })}
+                                    defaultValue={p.family?.id ?? ''}
+                                    onChange={(e) => post(`/admin/parents/${p.id}/reassign`, { family_id: Number(e.target.value) })}
                                     className="rounded-lg border border-[#D8DDD9] px-2 py-1 text-sm text-[#1B4332]"
                                 >
                                     <option value="">— ללא שיוך —</option>
-                                    {children.map((c) => (
-                                        <option key={c.id} value={c.id}>
-                                            {c.name}
+                                    {families.map((f) => (
+                                        <option key={f.id} value={f.id}>
+                                            {f.name}
                                         </option>
                                     ))}
                                 </select>

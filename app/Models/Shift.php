@@ -11,7 +11,7 @@ class Shift extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['date', 'time', 'type', 'parent_id', 'child_id', 'seats'];
+    protected $fillable = ['date', 'time', 'type', 'parent_id', 'family_id', 'seats'];
 
     protected $casts = [
         'date' => 'date:Y-m-d',
@@ -22,9 +22,9 @@ class Shift extends Model
         return $this->belongsTo(ParentUser::class, 'parent_id');
     }
 
-    public function child(): BelongsTo
+    public function family(): BelongsTo
     {
-        return $this->belongsTo(Child::class);
+        return $this->belongsTo(Family::class);
     }
 
     /**

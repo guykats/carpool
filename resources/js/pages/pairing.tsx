@@ -2,14 +2,14 @@ import { useEffect, useState } from 'react';
 import IdentityGateAndForm from '../components/identity-gate-and-form';
 import { getParentUuid, setParentUuid } from '../lib/parentIdentity';
 
-type Child = { id: number; name: string };
+type Family = { id: number; name: string };
 type Stage = 'checking' | 'need-identity' | 'approving' | 'done' | 'error';
 
 function csrfToken() {
     return document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? '';
 }
 
-export default function Pairing({ token, children }: { token: string; children: Child[] }) {
+export default function Pairing({ token, families }: { token: string; families: Family[] }) {
     const [stage, setStage] = useState<Stage>('checking');
 
     useEffect(() => {
@@ -51,7 +51,7 @@ export default function Pairing({ token, children }: { token: string; children: 
             {stage === 'checking' && <p className="text-sm text-[#5C6B66]">בודקים...</p>}
 
             {stage === 'need-identity' && (
-                <IdentityGateAndForm children={children} onIdentified={handleIdentified} />
+                <IdentityGateAndForm families={families} onIdentified={handleIdentified} />
             )}
 
             {stage === 'approving' && <p className="text-sm text-[#5C6B66]">מאשרים...</p>}

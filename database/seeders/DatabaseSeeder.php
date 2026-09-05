@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\Child;
+use App\Models\Family;
 use App\Models\ParentUser;
 use App\Models\Setting;
 use Illuminate\Database\Seeder;
@@ -14,18 +14,18 @@ class DatabaseSeeder extends Seeder
     {
         Setting::current();
 
-        // Replace these placeholder names with the real 7 kids.
-        $children = collect(['Child 1', 'Child 2', 'Child 3', 'Child 4', 'Child 5', 'Child 6', 'Child 7'])
-            ->map(fn ($name) => Child::firstOrCreate(['name' => $name]));
+        // Replace these placeholder names with the real 7 families.
+        $families = collect(['Family 1', 'Family 2', 'Family 3', 'Family 4', 'Family 5', 'Family 6', 'Family 7'])
+            ->map(fn ($name) => Family::firstOrCreate(['name' => $name]));
 
         // The single fixed admin account - is_admin is only ever set here,
-        // never through the app itself (see PRD section 3).
+        // never through the app itself (see PRD section 3). No name field
+        // to key off any more, so find-or-create by the is_admin flag.
         $admin = ParentUser::firstOrCreate(
-            ['name' => 'Admin'],
+            ['is_admin' => true],
             [
                 'uuid' => (string) Str::uuid(),
-                'child_id' => $children->first()->id,
-                'is_admin' => true,
+                'family_id' => $families->first()->id,
             ]
         );
 

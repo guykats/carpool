@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Child;
+use App\Models\Family;
 use App\Models\ParentUser;
 use App\Models\Shift;
 use App\Support\ShiftWeek;
@@ -25,7 +25,7 @@ class ShiftController extends Controller
 
         if (! $parent) {
             return Inertia::render('login', [
-                'children' => Child::orderBy('name')->get(['id', 'name']),
+                'families' => Family::orderBy('name')->get(['id', 'name']),
             ]);
         }
 
@@ -35,7 +35,7 @@ class ShiftController extends Controller
 
         ShiftWeek::ensureGenerated($weekStart);
 
-        $shifts = Shift::with(['child', 'parent'])
+        $shifts = Shift::with(['family', 'parent'])
             ->whereBetween('date', [$weekStart->format('Y-m-d'), $weekStart->copy()->addDays(6)->format('Y-m-d')])
             ->orderBy('date')
             ->orderBy('time')
@@ -43,7 +43,7 @@ class ShiftController extends Controller
             ->map(fn (Shift $s) => ShiftWeek::present($s));
 
         return Inertia::render('main', [
-            'currentParent' => $parent->load('child'),
+            'currentParent' => $parent->load('family'),
             'weekStart' => $weekStart->format('Y-m-d'),
             'shifts' => $shifts,
             'scoreboard' => $this->scoreboard(),
@@ -51,7 +51,7 @@ class ShiftController extends Controller
             // controls on the board itself (see main.tsx). Regular parents
             // don't need the full roster.
             'parents' => $parent->is_admin
-                ? ParentUser::with('child:id,name')->orderBy('name')->get()
+                ? ParentUser::with('family:id,name')->orderBy('id')->get()
                 : [],
         ]);
     }
@@ -75,7 +75,7 @@ class ShiftController extends Controller
             ->whereNull('parent_id')
             ->update([
                 'parent_id' => $parent->id,
-                'child_id' => $parent->child_id,
+                'family_id' => $parent->family_id,
                 'seats' => $data['seats'],
                 'updated_at' => now(),
             ]);
@@ -84,45 +84,46 @@ class ShiftController extends Controller
             return response()->json(['error' => 'This slot was just taken. Refreshing the board.'], 409);
         }
 
-        return response()->json(['shift' => ShiftWeek::present($shift->fresh(['child', 'parent']))]);
+        return response()->json(['shift' => ShiftWeek::present($shift->fresh(['family', 'parent']))]);
     }
 
     /**
-     * A parent may cancel a shift if it belongs to their own child -
+     * A parent may cancel a shift if it belongs to their own family -
      * regardless of which parent record actually made the booking (e.g.
-     * either parent of the same child can cancel the other's booking).
-     * Admin override lives in AdminController.
+     * either device belonging to the same family can cancel the other's
+     * booking). Admin override lives in AdminController.
      */
     public function cancel(Request $request, Shift $shift)
     {
         $parent = $request->attributes->get('currentParent');
         abort_if(! $parent, 401);
-        abort_if($shift->child_id !== $parent->child_id, 403, 'You can only cancel shifts for your own child.');
+        abort_if($shift->family_id !== $parent->family_id, 403, 'You can only cancel shifts for your own family.');
 
-        $shift->update(['parent_id' => null, 'child_id' => null, 'seats' => null]);
+        $shift->update(['parent_id' => null, 'family_id' => null, 'seats' => null]);
 
         return response()->json(['shift' => ShiftWeek::present($shift->fresh())]);
     }
 
     /**
-     * All-time count of past (already-driven) shifts per child - PRD 4.2.1.
-     * Computed at read time from date+time; there is no stored timestamp.
+     * All-time count of past (already-driven) shifts per family - PRD
+     * 4.2.1. Computed at read time from date+time; there is no stored
+     * timestamp.
      *
      * Filtered in PHP rather than raw SQL date+time concatenation, since
      * that syntax differs between SQLite (dev) and MySQL (prod) - fine at
-     * this scale (7 children, a couple of slots per school day).
+     * this scale (7 families, a couple of slots per school day).
      */
     private function scoreboard(): array
     {
         return Shift::query()
-            ->whereNotNull('child_id')
-            ->with('child:id,name')
+            ->whereNotNull('family_id')
+            ->with('family:id,name')
             ->get()
             ->filter(fn (Shift $s) => $s->isPast())
-            ->groupBy('child_id')
+            ->groupBy('family_id')
             ->map(fn ($shifts) => [
-                'child_id' => $shifts->first()->child_id,
-                'child_name' => $shifts->first()->child?->name,
+                'family_id' => $shifts->first()->family_id,
+                'family_name' => $shifts->first()->family?->name,
                 'rides' => $shifts->count(),
             ])
             ->sortByDesc('rides')

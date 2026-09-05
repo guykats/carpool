@@ -51,10 +51,9 @@ class ShiftWeek
             'time' => substr($shift->time, 0, 5),
             'type' => $shift->type,
             'isPast' => $shift->isPast(),
-            'parentName' => $shift->parent?->name,
             'parentId' => $shift->parent_id,
-            'childId' => $shift->child_id,
-            'childName' => $shift->child?->name,
+            'familyId' => $shift->family_id,
+            'familyName' => $shift->family?->name,
             'seats' => $shift->seats,
         ];
     }

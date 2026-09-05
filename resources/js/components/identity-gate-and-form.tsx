@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
 import { requestBiometricGate } from '../lib/biometricGate';
 
-type Child = { id: number; name: string };
+type Family = { id: number; name: string };
 type Stage = 'checking' | 'form' | 'gate-failed' | 'unsupported-handled';
 
 /**
- * Runs the Face ID gate, then the one-time name+child form, then calls
- * onIdentified(uuid) once a parent record exists for this device (see PRD
- * 4.1). If the device has no platform authenticator:
+ * Runs the Face ID gate, then the one-time family-selection form, then
+ * calls onIdentified(uuid) once a parent record exists for this device
+ * (see PRD 4.1). No personal name is collected anywhere - identity is
+ * purely "which family does this device represent". If the device has no
+ * platform authenticator:
  * - onUnsupportedDevice is provided (desktop/login.tsx) -> delegates entirely
  *   to the caller (e.g. show a QR pairing screen instead of this form)
  * - not provided (phone/pairing.tsx) -> skips the gate silently and shows
@@ -15,17 +17,16 @@ type Stage = 'checking' | 'form' | 'gate-failed' | 'unsupported-handled';
  *   itself wouldn't make sense
  */
 export default function IdentityGateAndForm({
-    children,
+    families,
     onIdentified,
     onUnsupportedDevice,
 }: {
-    children: Child[];
+    families: Family[];
     onIdentified: (uuid: string) => void;
     onUnsupportedDevice?: () => void;
 }) {
     const [stage, setStage] = useState<Stage>('checking');
-    const [name, setName] = useState('');
-    const [childId, setChildId] = useState<string>('');
+    const [familyId, setFamilyId] = useState<string>('');
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -49,8 +50,8 @@ export default function IdentityGateAndForm({
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        if (!name.trim() || !childId) {
-            setError('נא למלא שם ולבחור ילד/ה');
+        if (!familyId) {
+            setError('נא לבחור משפחה מהרשימה');
             return;
         }
         setSubmitting(true);
@@ -64,7 +65,7 @@ export default function IdentityGateAndForm({
                     'X-CSRF-TOKEN':
                         document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? '',
                 },
-                body: JSON.stringify({ name, child_id: Number(childId) }),
+                body: JSON.stringify({ family_id: Number(familyId) }),
             });
 
             if (!res.ok) throw new Error('signup failed');
@@ -102,27 +103,16 @@ export default function IdentityGateAndForm({
     return (
         <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4 rounded-2xl bg-white p-6 shadow-sm">
             <div>
-                <label className="mb-1 block text-sm font-medium text-[#1B4332]">השם שלכם</label>
-                <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="לדוגמה: דנה כהן"
-                    className="w-full rounded-lg border border-[#D8DDD9] px-3 py-2 text-[#1B4332] focus:border-[#1B4332] focus:outline-none focus:ring-2 focus:ring-[#1B4332]/20"
-                />
-            </div>
-
-            <div>
-                <label className="mb-1 block text-sm font-medium text-[#1B4332]">מי הילד/ה שלכם?</label>
+                <label className="mb-1 block text-sm font-medium text-[#1B4332]">בחרו את המשפחה שלכם</label>
                 <select
-                    value={childId}
-                    onChange={(e) => setChildId(e.target.value)}
+                    value={familyId}
+                    onChange={(e) => setFamilyId(e.target.value)}
                     className="w-full rounded-lg border border-[#D8DDD9] bg-white px-3 py-2 text-[#1B4332] focus:border-[#1B4332] focus:outline-none focus:ring-2 focus:ring-[#1B4332]/20"
                 >
                     <option value="">בחרו מהרשימה</option>
-                    {children.map((c) => (
-                        <option key={c.id} value={c.id}>
-                            {c.name}
+                    {families.map((f) => (
+                        <option key={f.id} value={f.id}>
+                            {f.name}
                         </option>
                     ))}
                 </select>

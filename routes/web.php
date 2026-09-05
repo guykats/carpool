@@ -23,7 +23,7 @@ Route::get('/debug-identity', function (\Illuminate\Http\Request $request) {
         'cookie_received' => $cookieUuid,
         'header_received' => $headerUuid,
         'uuid_used' => $uuid,
-        'matched_parent' => $parent ? ['id' => $parent->id, 'name' => $parent->name, 'is_admin' => $parent->is_admin] : null,
+        'matched_parent' => $parent ? ['id' => $parent->id, 'family_id' => $parent->family_id, 'is_admin' => $parent->is_admin] : null,
         'all_cookies_seen' => array_keys($request->cookies->all()),
     ]);
 });
@@ -47,8 +47,8 @@ Route::middleware('identify.parent')->group(function () {
     // --- Admin panel ---
     Route::middleware('ensure.admin')->prefix('admin')->group(function () {
         Route::get('/', [AdminController::class, 'index'])->name('admin');
-        Route::post('/children', [AdminController::class, 'storeChild']);
-        Route::post('/children/{child}/delete', [AdminController::class, 'destroyChild']);
+        Route::post('/families', [AdminController::class, 'storeFamily']);
+        Route::post('/families/{family}/delete', [AdminController::class, 'destroyFamily']);
         Route::post('/parents/{parent}/reassign', [AdminController::class, 'reassignParent']);
         Route::post('/shifts/{shift}/override', [AdminController::class, 'overrideShift']);
         Route::post('/shifts/{shift}/time', [AdminController::class, 'editShiftTime']);

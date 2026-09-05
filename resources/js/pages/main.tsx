@@ -8,22 +8,20 @@ type Shift = {
     time: string;
     type: 'departure_1' | 'departure_2' | 'departure_3' | 'return_1' | 'return_2' | 'return_3';
     isPast: boolean;
-    parentName: string | null;
     parentId: number | null;
-    childId: number | null;
-    childName: string | null;
+    familyId: number | null;
+    familyName: string | null;
     seats: number | null;
 };
 
-type ScoreRow = { child_id: number; child_name: string; rides: number };
+type ScoreRow = { family_id: number; family_name: string; rides: number };
 
-type ParentRow = { id: number; name: string; child: { id: number; name: string } | null };
+type ParentRow = { id: number; family: { id: number; name: string } | null };
 
 type CurrentParent = {
     id: number;
-    name: string;
-    child_id: number;
-    child: { id: number; name: string } | null;
+    family_id: number;
+    family: { id: number; name: string } | null;
     is_admin: boolean;
 };
 
@@ -40,15 +38,15 @@ const DAY_LABELS: Record<string, string> = {
     0: 'ראשון', 1: 'שני', 2: 'שלישי', 3: 'רביעי', 4: 'חמישי', 5: 'שישי', 6: 'שבת',
 };
 
-// Fixed color per child - same color in the scoreboard header and on slot
-// badges, so a parent can recognize a child at a glance either place.
-const CHILD_COLORS = ['#3A86FF', '#FB5607', '#8338EC', '#FF006E', '#06A77D', '#C1121F', '#5E548E', '#2A6F97'];
-function childColor(childId: number): string {
-    return CHILD_COLORS[(childId - 1) % CHILD_COLORS.length];
+// Fixed color per family - same color in the scoreboard header and on slot
+// badges, so a parent can recognize a family at a glance either place.
+const FAMILY_COLORS = ['#3A86FF', '#FB5607', '#8338EC', '#FF006E', '#06A77D', '#C1121F', '#5E548E', '#2A6F97'];
+function familyColor(familyId: number): string {
+    return FAMILY_COLORS[(familyId - 1) % FAMILY_COLORS.length];
 }
 
-function childColorWithOpacity(childId: number, opacity: number): string {
-    const hex = childColor(childId).replace('#', '');
+function familyColorWithOpacity(familyId: number, opacity: number): string {
+    const hex = familyColor(familyId).replace('#', '');
     const r = parseInt(hex.substring(0, 2), 16);
     const g = parseInt(hex.substring(2, 4), 16);
     const b = parseInt(hex.substring(4, 6), 16);
@@ -174,19 +172,21 @@ export default function Main({
         <div dir="rtl" className="min-h-screen bg-[#F7F7F2] pb-10">
             <header className="sticky top-0 z-10 border-b border-[#D8DDD9] bg-[#1B4332] px-4 py-3 text-white shadow-sm">
                 <div className="mx-auto flex max-w-2xl flex-col gap-2">
-                    <div className="text-sm font-medium">שלום {currentParent.name}</div>
+                    <div className="text-sm font-medium">
+                        שלום{currentParent.family?.name ? `, משפחת ${currentParent.family.name}` : ''}
+                    </div>
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                         {scoreboard.length === 0 && <span className="text-sm text-white/70">עדיין אין נסיעות שבוצעו</span>}
                         {scoreboard.map((row) => (
-                            <div key={row.child_id} className="flex flex-col items-center px-1">
+                            <div key={row.family_id} className="flex flex-col items-center px-1">
                                 <span className="flex items-center gap-1 text-xs text-white/85">
                                     <span
                                         className="inline-block h-2 w-2 rounded-full"
-                                        style={{ backgroundColor: childColor(row.child_id) }}
+                                        style={{ backgroundColor: familyColor(row.family_id) }}
                                     />
-                                    {row.child_name}
+                                    {row.family_name}
                                 </span>
-                                <span className="text-lg font-bold" style={{ color: childColor(row.child_id) }}>
+                                <span className="text-lg font-bold" style={{ color: familyColor(row.family_id) }}>
                                     {row.rides}
                                 </span>
                             </div>
@@ -224,36 +224,39 @@ export default function Main({
                         <ul>
                             {dayShifts.map((shift) => {
                                 const isMyBooking = shift.parentId === currentParent.id;
-                                const isMyChild = shift.childId === currentParent.child_id;
+                                const isMyFamily = shift.familyId === currentParent.family_id;
                                 return (
                                     <li
                                         key={shift.id}
                                         className="border-b border-[#F0F0EC] px-4 py-3 last:border-0"
-                                        style={shift.childId ? { backgroundColor: childColorWithOpacity(shift.childId, 0.1) } : undefined}
+                                        style={
+                                            shift.familyId
+                                                ? { backgroundColor: familyColorWithOpacity(shift.familyId, 0.1) }
+                                                : undefined
+                                        }
                                     >
                                         <div className="flex items-center justify-between">
                                         <div>
                                             <p className="text-sm font-medium text-[#1B4332]">
                                                 {SLOT_LABELS[shift.type]} · {shift.time}
                                             </p>
-                                            {shift.childName ? (
+                                            {shift.familyName ? (
                                                 <>
                                                     <p
                                                         className="flex items-center gap-1.5 text-xs font-semibold"
-                                                        style={{ color: childColor(shift.childId!) }}
+                                                        style={{ color: familyColor(shift.familyId!) }}
                                                     >
                                                         <span
                                                             className="inline-block h-2 w-2 rounded-full"
-                                                            style={{ backgroundColor: childColor(shift.childId!) }}
+                                                            style={{ backgroundColor: familyColor(shift.familyId!) }}
                                                         />
-                                                        {shift.childName}
+                                                        משפחת {shift.familyName}
                                                     </p>
-                                                    <p className="text-[11px] text-[#5C6B66]">
-                                                        מסיע/ה: {shift.parentName}
-                                                        {shift.seats
-                                                            ? ` · לוקח/ת ${shift.seats === 1 ? 'ילד אחד' : `${shift.seats} ילדים`}`
-                                                            : ''}
-                                                    </p>
+                                                    {shift.seats && (
+                                                        <p className="text-[11px] text-[#5C6B66]">
+                                                            לוקח/ת {shift.seats === 1 ? 'ילד אחד' : `${shift.seats} ילדים`}
+                                                        </p>
+                                                    )}
                                                 </>
                                             ) : (
                                                 <p className="text-xs text-[#5C6B66]">{shift.isPast ? 'לא שובץ' : 'פנוי'}</p>
@@ -271,7 +274,7 @@ export default function Main({
                                                     הוסף ליומן
                                                 </a>
                                             )}
-                                            {!shift.parentName && !shift.isPast && (
+                                            {!shift.familyName && !shift.isPast && (
                                                 <>
                                                     <select
                                                         value={seatsChoice[shift.id] ?? 1}
@@ -296,7 +299,7 @@ export default function Main({
                                                     </button>
                                                 </>
                                             )}
-                                            {isMyChild && shift.parentName && !shift.isPast && (
+                                            {isMyFamily && shift.familyName && !shift.isPast && (
                                                 <button
                                                     disabled={busyId === shift.id}
                                                     onClick={() => act(shift, 'cancel')}
@@ -365,7 +368,8 @@ export default function Main({
  * Inline admin override controls, shown below every shift row (including
  * already-past ones - see PRD 4.2.3 / 4.3 and admin.tsx's removal note).
  * Lets an admin assign/clear any shift and edit its time, regardless of
- * who currently holds it or whether it already happened.
+ * who currently holds it or whether it already happened. Parents have no
+ * personal name (removed site-wide) so options are labeled by family.
  */
 function AdminOverrideControls({
     shift,
@@ -404,7 +408,7 @@ function AdminOverrideControls({
                 <option value="">— פנוי —</option>
                 {parents.map((p) => (
                     <option key={p.id} value={p.id}>
-                        {p.name} {p.child ? `(${p.child.name})` : ''}
+                        {p.family ? `משפחת ${p.family.name}` : `מכשיר #${p.id} (ללא שיוך)`}
                     </option>
                 ))}
             </select>

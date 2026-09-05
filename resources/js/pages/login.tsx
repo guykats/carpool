@@ -4,7 +4,7 @@ import QRCode from 'qrcode';
 import IdentityGateAndForm from '../components/identity-gate-and-form';
 import { setParentUuid } from '../lib/parentIdentity';
 
-type Child = { id: number; name: string };
+type Family = { id: number; name: string };
 
 /**
  * Desktop devices have no Face ID/fingerprint hardware, so instead of the
@@ -80,7 +80,7 @@ function QrPairingScreen({ onIdentified }: { onIdentified: (uuid: string) => voi
  * here anymore. That used to live in this file and caused real bugs; see
  * lib/parentIdentity.ts for the full explanation of the cookie-based fix.
  */
-export default function Login({ children }: { children: Child[] }) {
+export default function Login({ families }: { families: Family[] }) {
     const [showQr, setShowQr] = useState(false);
 
     function handleIdentified(uuid: string) {
@@ -93,21 +93,21 @@ export default function Login({ children }: { children: Child[] }) {
             <div className="mb-8 text-center">
                 <div className="mb-2 text-4xl">⚽</div>
                 <h1 className="text-2xl font-bold text-[#1B4332]">הסעות לחוג</h1>
-                <p className="mt-1 text-sm text-[#5C6B66]">שני פרטים וזהו — נכנסים ללוח</p>
+                <p className="mt-1 text-sm text-[#5C6B66]">בחרו משפחה וזהו — נכנסים ללוח</p>
             </div>
 
             {showQr ? (
                 <QrPairingScreen onIdentified={handleIdentified} />
             ) : (
                 <IdentityGateAndForm
-                    children={children}
+                    families={families}
                     onIdentified={handleIdentified}
                     onUnsupportedDevice={() => setShowQr(true)}
                 />
             )}
 
             <p className="mt-4 text-center text-xs text-[#5C6B66]">
-                הילד/ה לא ברשימה? פנו למנהל/ת הקבוצה
+                המשפחה שלכם לא ברשימה? פנו למנהל/ת הקבוצה
             </p>
         </div>
     );

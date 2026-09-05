@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Child;
+use App\Models\Family;
 use App\Models\ParentUser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -12,31 +12,30 @@ use Inertia\Response;
 class ParentController extends Controller
 {
     /**
-     * Login/signup screen: pick a name and a child from the fixed dropdown.
-     * See PRD 4.1 - this is the only "auth" screen the app has.
+     * Login/signup screen: pick a family from the fixed dropdown. No
+     * personal name is collected anywhere on this site - identity is
+     * purely "which family does this device represent". See PRD 4.1.
      */
     public function create(): Response
     {
         return Inertia::render('login', [
-            'children' => Child::orderBy('name')->get(['id', 'name']),
+            'families' => Family::orderBy('name')->get(['id', 'name']),
         ]);
     }
 
     /**
-     * Creates a new parent identity immediately assigned to a child
+     * Creates a new device identity immediately assigned to a family
      * (self-service - no admin approval step, see PRD 4.1).
      */
     public function store(Request $request)
     {
         $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'child_id' => ['required', 'exists:children,id'],
+            'family_id' => ['required', 'exists:families,id'],
         ]);
 
         $parent = ParentUser::create([
             'uuid' => (string) Str::uuid(),
-            'name' => $data['name'],
-            'child_id' => $data['child_id'],
+            'family_id' => $data['family_id'],
             'is_admin' => false,
         ]);
 
