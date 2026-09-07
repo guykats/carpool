@@ -6,7 +6,7 @@ type Shift = {
     id: number;
     date: string;
     time: string;
-    type: 'departure_1' | 'departure_2' | 'departure_3' | 'return_1' | 'return_2' | 'return_3';
+    type: 'departure_1' | 'departure_2' | 'departure_3' | 'departure_4' | 'return_1' | 'return_2' | 'return_3' | 'return_4';
     isPast: boolean;
     parentId: number | null;
     familyId: number | null;
@@ -29,9 +29,11 @@ const SLOT_LABELS: Record<Shift['type'], string> = {
     departure_1: 'הלוך – רכב 1',
     departure_2: 'הלוך – רכב 2',
     departure_3: 'הלוך – רכב 3',
+    departure_4: 'הלוך – רכב 4',
     return_1: 'חזור – רכב 1',
     return_2: 'חזור – רכב 2',
     return_3: 'חזור – רכב 3',
+    return_4: 'חזור – רכב 4',
 };
 
 const DAY_LABELS: Record<string, string> = {

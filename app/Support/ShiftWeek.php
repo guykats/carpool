@@ -8,7 +8,7 @@ use Carbon\Carbon;
 
 class ShiftWeek
 {
-    private const SLOT_TYPES = ['departure_1', 'departure_2', 'departure_3', 'return_1', 'return_2', 'return_3'];
+    private const SLOT_TYPES = ['departure_1', 'departure_2', 'departure_3', 'departure_4', 'return_1', 'return_2', 'return_3', 'return_4'];
     private const DAY_NAMES = [
         'Sunday' => 0, 'Monday' => 1, 'Tuesday' => 2, 'Wednesday' => 3,
         'Thursday' => 4, 'Friday' => 5, 'Saturday' => 6,
