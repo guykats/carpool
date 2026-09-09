@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, router } from '@inertiajs/react';
+import confetti from 'canvas-confetti';
 import { getParentUuid } from '../lib/parentIdentity';
 
 type Shift = {
@@ -77,16 +78,19 @@ export default function Main({
     shifts,
     scoreboard,
     parents,
+    familyCount,
 }: {
     currentParent: CurrentParent;
     weekStart: string;
     shifts: Shift[];
     scoreboard: ScoreRow[];
     parents: ParentRow[];
+    familyCount: number;
 }) {
     const [busyId, setBusyId] = useState<number | null>(null);
     const [notice, setNotice] = useState<string | null>(null);
     const [seatsChoice, setSeatsChoice] = useState<Record<number, number>>({});
+    const [celebration, setCelebration] = useState<string | null>(null);
     // Admin edit mode: when off, an admin sees the board exactly like any
     // other parent (no inline override controls). Persisted so it doesn't
     // reset on every visit.
@@ -107,6 +111,30 @@ export default function Main({
         return acc;
     }, {});
 
+    // How many children still need a ride for this day+direction - total
+    // families minus the seats already claimed across that direction's cars.
+    function remainingFor(dayShifts: Shift[], direction: 'departure' | 'return'): number {
+        const claimed = dayShifts
+            .filter((s) => s.type.startsWith(direction) && s.seats)
+            .reduce((sum, s) => sum + (s.seats ?? 0), 0);
+        return Math.max(0, familyCount - claimed);
+    }
+
+    function celebrate() {
+        try {
+            confetti({ particleCount: 140, spread: 90, origin: { y: 0.6 } });
+        } catch (e) {
+            console.error('Confetti failed (non-critical):', e);
+        }
+        setTimeout(() => {
+            try {
+                confetti({ particleCount: 80, spread: 120, origin: { y: 0.4 } });
+            } catch (e) {
+                console.error('Confetti failed (non-critical):', e);
+            }
+        }, 250);
+    }
+
     async function act(shift: Shift, action: 'assign' | 'cancel', seats?: number) {
         setBusyId(shift.id);
         setNotice(null);
@@ -121,6 +149,25 @@ export default function Main({
             } else if (!res.ok) {
                 setNotice(`הפעולה נכשלה (שגיאה ${res.status}), נסו לרענן ולנסות שוב.`);
                 return;
+            } else if (action === 'assign' && seats) {
+                // Isolated in its own try/catch: if this throws for any
+                // reason (confetti/canvas quirk on a specific browser,
+                // ad blocker, etc.), it must never prevent router.reload()
+                // below from running - the actual assignment already
+                // succeeded on the server at this point.
+                try {
+                    const direction: 'departure' | 'return' = shift.type.startsWith('departure') ? 'departure' : 'return';
+                    const dayShifts = byDate[shift.date] ?? [];
+                    const before = remainingFor(dayShifts, direction);
+                    const after = Math.max(0, before - seats);
+                    if (before > 0 && after === 0) {
+                        setCelebration(`${shift.date}-${direction}`);
+                        celebrate();
+                        setTimeout(() => setCelebration(null), 2600);
+                    }
+                } catch (celebrationError) {
+                    console.error('Celebration failed (non-critical):', celebrationError);
+                }
             }
             router.reload({ only: ['shifts', 'scoreboard'] });
         } finally {
@@ -218,10 +265,25 @@ export default function Main({
                     </button>
                 </div>
 
-                {Object.entries(byDate).map(([date, dayShifts]) => (
-                    <div key={date} className="mb-5 overflow-hidden rounded-2xl bg-white shadow-sm">
-                        <div className="border-b border-[#F0F0EC] bg-[#F7F7F2] px-4 py-2 text-sm font-semibold text-[#1B4332]">
-                            יום {DAY_LABELS[new Date(date).getDay()]} · {date}
+                {Object.entries(byDate).map(([date, dayShifts]) => {
+                    const departureRemaining = remainingFor(dayShifts, 'departure');
+                    const returnRemaining = remainingFor(dayShifts, 'return');
+                    return (
+                    <div key={date} className="relative mb-5 overflow-hidden rounded-2xl bg-white shadow-sm">
+                        {celebration === `${date}-departure` && <CelebrationBadge />}
+                        {celebration === `${date}-return` && <CelebrationBadge />}
+                        <div className="border-b border-[#F0F0EC] bg-[#F7F7F2] px-4 py-2">
+                            <p className="text-sm font-semibold text-[#1B4332]">
+                                יום {DAY_LABELS[new Date(date).getDay()]} · {date}
+                            </p>
+                            <div className="mt-1 flex gap-3 text-xs">
+                                <span className={departureRemaining === 0 ? 'font-semibold text-[#06A77D]' : 'text-[#5C6B66]'}>
+                                    {departureRemaining === 0 ? '🎉 הלוך: כולם משובצים' : `הלוך: נותרו ${departureRemaining} ילדים לשיבוץ`}
+                                </span>
+                                <span className={returnRemaining === 0 ? 'font-semibold text-[#06A77D]' : 'text-[#5C6B66]'}>
+                                    {returnRemaining === 0 ? '🎉 חזור: כולם משובצים' : `חזור: נותרו ${returnRemaining} ילדים לשיבוץ`}
+                                </span>
+                            </div>
                         </div>
                         <ul>
                             {dayShifts.map((shift) => {
@@ -327,7 +389,8 @@ export default function Main({
                             })}
                         </ul>
                     </div>
-                ))}
+                    );
+                })}
             </div>
 
             {currentParent.is_admin && (
@@ -436,6 +499,23 @@ function AdminOverrideControls({
             >
                 שמירה
             </button>
+        </div>
+    );
+}
+
+/**
+ * Non-blocking celebration badge: a bouncing emoji over the day card,
+ * pointer-events disabled so it never blocks the list underneath. Confetti
+ * (triggered separately, see act()) falls across the whole visible
+ * viewport at the same time.
+ */
+function CelebrationBadge() {
+    return (
+        <div
+            className="pointer-events-none absolute top-1.5 left-1/2 z-30 text-5xl"
+            style={{ animation: 'carpool-bounce-in 0.7s ease' }}
+        >
+            ⚽
         </div>
     );
 }

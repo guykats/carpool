@@ -47,6 +47,10 @@ class ShiftController extends Controller
             'weekStart' => $weekStart->format('Y-m-d'),
             'shifts' => $shifts,
             'scoreboard' => $this->scoreboard(),
+            // Total families = total children needing a ride each direction
+            // each day - used to show "X children still need a ride" per
+            // day/direction, and to trigger the completion celebration.
+            'familyCount' => Family::count(),
             // Only sent to admins - powers the inline shift-override
             // controls on the board itself (see main.tsx). Regular parents
             // don't need the full roster.
