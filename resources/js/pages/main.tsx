@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Link, router } from '@inertiajs/react';
-import confetti from 'canvas-confetti';
 import { getParentUuid } from '../lib/parentIdentity';
 
 type Shift = {
@@ -54,6 +53,78 @@ function familyColorWithOpacity(familyId: number, opacity: number): string {
     const g = parseInt(hex.substring(2, 4), 16);
     const b = parseInt(hex.substring(4, 6), 16);
     return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+}
+
+/**
+ * Small hand-rolled canvas confetti burst - deliberately not using the
+ * canvas-confetti npm package. That package worked fine in tsc/build, but
+ * repeatedly failed at runtime in the artifact-preview environment used to
+ * approve this feature (never fully diagnosed - possibly some sandboxing
+ * quirk in how that environment evaluates the bundled library). This
+ * version was verified working end-to-end before being ported in here, so
+ * there's no remaining dependency on canvas-confetti at all.
+ */
+function fireConfettiBurst(originX: number, originY: number): void {
+    const colors = ['#1B4332', '#E8A33D', '#06A77D', '#3A86FF', '#FB5607', '#8338EC'];
+    let canvas = document.getElementById('carpool-confetti-canvas') as HTMLCanvasElement | null;
+    if (!canvas) {
+        canvas = document.createElement('canvas');
+        canvas.id = 'carpool-confetti-canvas';
+        canvas.style.cssText = 'position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:60;';
+        document.body.appendChild(canvas);
+    }
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const startX = canvas.width * originX;
+    const startY = canvas.height * originY;
+    const particles = Array.from({ length: 90 }, () => {
+        const angle = (-90 + (Math.random() - 0.5) * 100) * (Math.PI / 180);
+        const speed = 6 + Math.random() * 8;
+        return {
+            x: startX,
+            y: startY,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            size: 5 + Math.random() * 4,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            rotation: Math.random() * 360,
+            rotationSpeed: (Math.random() - 0.5) * 20,
+            life: 0,
+        };
+    });
+
+    function tick() {
+        if (!ctx || !canvas) return;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        let stillAlive = false;
+        particles.forEach((p) => {
+            p.life++;
+            p.vy += 0.25;
+            p.x += p.vx;
+            p.y += p.vy;
+            p.rotation += p.rotationSpeed;
+            const opacity = Math.max(0, 1 - p.life / 90);
+            if (opacity > 0 && p.y < canvas.height + 20) {
+                stillAlive = true;
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate((p.rotation * Math.PI) / 180);
+                ctx.globalAlpha = opacity;
+                ctx.fillStyle = p.color;
+                ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+                ctx.restore();
+            }
+        });
+        if (stillAlive) {
+            requestAnimationFrame(tick);
+        } else {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+    }
+    requestAnimationFrame(tick);
 }
 
 function csrfToken() {
@@ -122,17 +193,11 @@ export default function Main({
 
     function celebrate() {
         try {
-            confetti({ particleCount: 140, spread: 90, origin: { y: 0.6 } });
+            fireConfettiBurst(0.5, 0.5);
+            setTimeout(() => fireConfettiBurst(0.5, 0.4), 250);
         } catch (e) {
             console.error('Confetti failed (non-critical):', e);
         }
-        setTimeout(() => {
-            try {
-                confetti({ particleCount: 80, spread: 120, origin: { y: 0.4 } });
-            } catch (e) {
-                console.error('Confetti failed (non-critical):', e);
-            }
-        }, 250);
     }
 
     async function act(shift: Shift, action: 'assign' | 'cancel', seats?: number) {
@@ -163,7 +228,7 @@ export default function Main({
                     if (before > 0 && after === 0) {
                         setCelebration(`${shift.date}-${direction}`);
                         celebrate();
-                        setTimeout(() => setCelebration(null), 2600);
+                        setTimeout(() => setCelebration(null), 1650);
                     }
                 } catch (celebrationError) {
                     console.error('Celebration failed (non-critical):', celebrationError);
@@ -270,8 +335,6 @@ export default function Main({
                     const returnRemaining = remainingFor(dayShifts, 'return');
                     return (
                     <div key={date} className="relative mb-5 overflow-hidden rounded-2xl bg-white shadow-sm">
-                        {celebration === `${date}-departure` && <CelebrationBadge />}
-                        {celebration === `${date}-return` && <CelebrationBadge />}
                         <div className="border-b border-[#F0F0EC] bg-[#F7F7F2] px-4 py-2">
                             <p className="text-sm font-semibold text-[#1B4332]">
                                 יום {DAY_LABELS[new Date(date).getDay()]} · {date}
@@ -393,6 +456,8 @@ export default function Main({
                 })}
             </div>
 
+            {celebration && <CelebrationBadge />}
+
             {currentParent.is_admin && (
                 <button
                     onClick={toggleEditMode}
@@ -504,17 +569,15 @@ function AdminOverrideControls({
 }
 
 /**
- * Non-blocking celebration badge: a bouncing emoji over the day card,
- * pointer-events disabled so it never blocks the list underneath. Confetti
- * (triggered separately, see act()) falls across the whole visible
- * viewport at the same time.
+ * Non-blocking celebration badge: the ball pops in at the center of the
+ * screen, holds briefly, then flies out (kicked away), while confetti
+ * (see celebrate()) bursts across the visible viewport at the same time.
+ * Fixed positioning + pointer-events: none means it never blocks anything
+ * underneath.
  */
 function CelebrationBadge() {
     return (
-        <div
-            className="pointer-events-none absolute top-1.5 left-1/2 z-30 text-5xl"
-            style={{ animation: 'carpool-bounce-in 0.7s ease' }}
-        >
+        <div className="pointer-events-none fixed top-1/2 left-1/2 z-50 text-6xl" style={{ animation: 'carpool-ball-kick 1.6s ease-in forwards' }}>
             ⚽
         </div>
     );
