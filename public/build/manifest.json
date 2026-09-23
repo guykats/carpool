@@ -1,0 +1,68 @@
+{
+  "_identity-gate-and-form-4DI6bc6k.js": {
+    "file": "assets/identity-gate-and-form-4DI6bc6k.js",
+    "name": "identity-gate-and-form",
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/css/app.css": {
+    "file": "assets/app-Dly0ZPHz.css",
+    "name": "app",
+    "names": [
+      "app.css"
+    ],
+    "src": "resources/css/app.css",
+    "isEntry": true
+  },
+  "resources/js/app.tsx": {
+    "file": "assets/app-8sScZ_-K.js",
+    "name": "app",
+    "src": "resources/js/app.tsx",
+    "isEntry": true,
+    "dynamicImports": [
+      "resources/js/pages/admin.tsx",
+      "resources/js/pages/login.tsx",
+      "resources/js/pages/main.tsx",
+      "resources/js/pages/pairing.tsx"
+    ]
+  },
+  "resources/js/pages/admin.tsx": {
+    "file": "assets/admin-WihArc6U.js",
+    "name": "admin",
+    "src": "resources/js/pages/admin.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/pages/login.tsx": {
+    "file": "assets/login-Bs8m16Kd.js",
+    "name": "login",
+    "src": "resources/js/pages/login.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx",
+      "_identity-gate-and-form-4DI6bc6k.js"
+    ]
+  },
+  "resources/js/pages/main.tsx": {
+    "file": "assets/main-CG0SmL9c.js",
+    "name": "main",
+    "src": "resources/js/pages/main.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/pages/pairing.tsx": {
+    "file": "assets/pairing-B3bXxaUQ.js",
+    "name": "pairing",
+    "src": "resources/js/pages/pairing.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx",
+      "_identity-gate-and-form-4DI6bc6k.js"
+    ]
+  }
+}
