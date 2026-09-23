@@ -53,5 +53,7 @@ Route::middleware('identify.parent')->group(function () {
         Route::post('/shifts/{shift}/override', [AdminController::class, 'overrideShift']);
         Route::post('/shifts/{shift}/time', [AdminController::class, 'editShiftTime']);
         Route::post('/settings', [AdminController::class, 'updateSettings']);
+        Route::post('/holidays', [AdminController::class, 'storeHoliday']);
+        Route::post('/holidays/{holiday}/delete', [AdminController::class, 'destroyHoliday']);
     });
 });

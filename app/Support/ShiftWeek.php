@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\Holiday;
 use App\Models\Setting;
 use App\Models\Shift;
 use Carbon\Carbon;
@@ -19,10 +20,19 @@ class ShiftWeek
      * (PRD 4.2.2 - no seed/cron). Works identically for past or future
      * weeks - there's no restriction on which week can be generated, which
      * is what lets the admin override view manage past weeks too.
+     *
+     * Skips any date that matches a Holiday (Israeli holidays / days of
+     * rest - no club session, see PRD 4.2.2). If a holiday is added for a
+     * date that already has generated shifts, those existing rows are left
+     * alone (an admin can clear them manually) - this only prevents new
+     * generation going forward.
      */
     public static function ensureGenerated(Carbon $weekStart): void
     {
         $settings = Setting::current();
+        $holidayDates = Holiday::whereBetween('date', [
+            $weekStart->format('Y-m-d'), $weekStart->copy()->addDays(6)->format('Y-m-d'),
+        ])->pluck('date')->map(fn ($d) => $d->format('Y-m-d'))->all();
 
         foreach ($settings->days as $dayName) {
             $offset = self::DAY_NAMES[$dayName] ?? null;
@@ -31,6 +41,10 @@ class ShiftWeek
             }
 
             $date = $weekStart->copy()->addDays($offset)->format('Y-m-d');
+
+            if (in_array($date, $holidayDates, true)) {
+                continue;
+            }
 
             foreach (self::SLOT_TYPES as $type) {
                 $time = str_starts_with($type, 'departure') ? $settings->departure_time : $settings->return_time;
@@ -41,6 +55,18 @@ class ShiftWeek
                 );
             }
         }
+    }
+
+    /** Holidays falling within the given week, for the frontend to render as shaded/unassignable day cards. */
+    public static function holidaysInWeek(Carbon $weekStart): array
+    {
+        return Holiday::whereBetween('date', [
+            $weekStart->format('Y-m-d'), $weekStart->copy()->addDays(6)->format('Y-m-d'),
+        ])
+            ->orderBy('date')
+            ->get()
+            ->map(fn (Holiday $h) => ['date' => $h->date->format('Y-m-d'), 'name' => $h->name])
+            ->all();
     }
 
     public static function present(Shift $shift): array

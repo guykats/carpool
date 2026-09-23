@@ -47,6 +47,7 @@ class ShiftController extends Controller
             'weekStart' => $weekStart->format('Y-m-d'),
             'shifts' => $shifts,
             'scoreboard' => $this->scoreboard(),
+            'holidays' => ShiftWeek::holidaysInWeek($weekStart),
             // Total families = total children needing a ride each direction
             // each day - used to show "X children still need a ride" per
             // day/direction, and to trigger the completion celebration.

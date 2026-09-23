@@ -5,6 +5,7 @@ import { getParentUuid } from '../lib/parentIdentity';
 type Family = { id: number; name: string };
 type ParentRow = { id: number; is_admin: boolean; family: Family | null };
 type Settings = { days: string[]; departure_time: string; return_time: string };
+type Holiday = { id: number; date: string; name: string };
 
 function csrfToken() {
     return document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? '';
@@ -41,15 +42,19 @@ export default function Admin({
     families,
     parents,
     settings,
+    holidays,
 }: {
     families: Family[];
     parents: ParentRow[];
     settings: Settings;
+    holidays: Holiday[];
 }) {
     const [newFamily, setNewFamily] = useState('');
     const [departure, setDeparture] = useState(settings.departure_time);
     const [returnTime, setReturnTime] = useState(settings.return_time);
     const [selectedDays, setSelectedDays] = useState<string[]>(settings.days);
+    const [newHolidayDate, setNewHolidayDate] = useState('');
+    const [newHolidayName, setNewHolidayName] = useState('');
 
     function toggleDay(value: string) {
         setSelectedDays((prev) => (prev.includes(value) ? prev.filter((d) => d !== value) : [...prev, value]));
@@ -187,6 +192,55 @@ export default function Admin({
                         שינוי הימים משפיע רק על שבועות חדשים שייווצרו (ראו PRD - יצירה on-demand). לניהול משבצות בודדות
                         (שיבוץ/ביטול/עריכת שעה, כולל ימים שעברו) - עשו זאת ישירות בלוח ההסעות הראשי.
                     </p>
+                </section>
+
+                <section className="rounded-2xl bg-white p-4 shadow-sm">
+                    <h2 className="mb-1 font-semibold text-[#1B4332]">חגים וימי שבתון</h2>
+                    <p className="mb-3 text-xs text-[#5C6B66]">
+                        בימים אלו לא יהיה אפשר להשתבץ - הם יופיעו בלוח מוצללים עם שם החג, ולא ייווצרו עבורם משבצות.
+                        רשימת ברירת המחדל היא הערכה שלנו לפי לוח החגים - כדאי לבדוק ולתקן אם צריך.
+                    </p>
+                    <ul className="mb-3 space-y-1 text-sm">
+                        {holidays.map((h) => (
+                            <li key={h.id} className="flex items-center justify-between text-[#5C6B66]">
+                                <span>
+                                    {h.date} — {h.name}
+                                </span>
+                                <button
+                                    onClick={() => post(`/admin/holidays/${h.id}/delete`, {})}
+                                    className="text-xs text-red-600 underline"
+                                >
+                                    מחיקה
+                                </button>
+                            </li>
+                        ))}
+                        {holidays.length === 0 && <li className="text-xs text-[#5C6B66]">אין חגים ברשימה</li>}
+                    </ul>
+                    <div className="flex flex-wrap gap-2">
+                        <input
+                            type="date"
+                            value={newHolidayDate}
+                            onChange={(e) => setNewHolidayDate(e.target.value)}
+                            className="rounded-lg border border-[#D8DDD9] px-3 py-1.5 text-sm text-[#1B4332]"
+                        />
+                        <input
+                            value={newHolidayName}
+                            onChange={(e) => setNewHolidayName(e.target.value)}
+                            placeholder="שם החג"
+                            className="flex-1 rounded-lg border border-[#D8DDD9] px-3 py-1.5 text-sm text-[#1B4332]"
+                        />
+                        <button
+                            onClick={() => {
+                                if (!newHolidayDate || !newHolidayName.trim()) return;
+                                post('/admin/holidays', { date: newHolidayDate, name: newHolidayName });
+                                setNewHolidayDate('');
+                                setNewHolidayName('');
+                            }}
+                            className="rounded-lg bg-[#1B4332] px-3 py-1.5 text-sm text-white"
+                        >
+                            הוספה
+                        </button>
+                    </div>
                 </section>
             </div>
         </div>

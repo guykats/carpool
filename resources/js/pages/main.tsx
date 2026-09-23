@@ -150,6 +150,7 @@ export default function Main({
     scoreboard,
     parents,
     familyCount,
+    holidays,
 }: {
     currentParent: CurrentParent;
     weekStart: string;
@@ -157,6 +158,7 @@ export default function Main({
     scoreboard: ScoreRow[];
     parents: ParentRow[];
     familyCount: number;
+    holidays: { date: string; name: string }[];
 }) {
     const [busyId, setBusyId] = useState<number | null>(null);
     const [notice, setNotice] = useState<string | null>(null);
@@ -181,6 +183,14 @@ export default function Main({
         (acc[s.date] ??= []).push(s);
         return acc;
     }, {});
+    const holidayByDate = holidays.reduce<Record<string, string>>((acc, h) => {
+        acc[h.date] = h.name;
+        return acc;
+    }, {});
+    // Union of shift days and holiday days, sorted - a holiday day has no
+    // shifts generated for it (see ShiftWeek::ensureGenerated) but must
+    // still appear in the week, shaded and unassignable, per PRD 4.2.2.
+    const allDates = Array.from(new Set([...Object.keys(byDate), ...holidays.map((h) => h.date)])).sort();
 
     // How many children still need a ride for this day+direction - total
     // families minus the seats already claimed across that direction's cars.
@@ -330,7 +340,11 @@ export default function Main({
                     </button>
                 </div>
 
-                {Object.entries(byDate).map(([date, dayShifts]) => {
+                {allDates.map((date) => {
+                    if (holidayByDate[date]) {
+                        return <HolidayDayCard key={date} date={date} name={holidayByDate[date]} />;
+                    }
+                    const dayShifts = byDate[date] ?? [];
                     const departureRemaining = remainingFor(dayShifts, 'departure');
                     const returnRemaining = remainingFor(dayShifts, 'return');
                     return (
@@ -352,6 +366,10 @@ export default function Main({
                             {dayShifts.map((shift) => {
                                 const isMyBooking = shift.parentId === currentParent.id;
                                 const isMyFamily = shift.familyId === currentParent.family_id;
+                                const direction: 'departure' | 'return' = shift.type.startsWith('departure') ? 'departure' : 'return';
+                                const remaining = remainingFor(dayShifts, direction);
+                                const maxSeats = Math.min(4, remaining);
+                                const canClaim = remaining >= 2;
                                 return (
                                     <li
                                         key={shift.id}
@@ -404,22 +422,28 @@ export default function Main({
                                             {!shift.familyName && !shift.isPast && (
                                                 <>
                                                     <select
-                                                        value={seatsChoice[shift.id] ?? 2}
+                                                        value={Math.min(seatsChoice[shift.id] ?? 2, maxSeats || 2)}
                                                         onChange={(e) =>
                                                             setSeatsChoice((prev) => ({ ...prev, [shift.id]: Number(e.target.value) }))
                                                         }
-                                                        className="rounded-lg border border-[#D8DDD9] bg-white px-2 py-1.5 text-xs text-[#1B4332]"
+                                                        disabled={!canClaim}
+                                                        className="rounded-lg border border-[#D8DDD9] bg-white px-2 py-1.5 text-xs text-[#1B4332] disabled:opacity-50"
                                                         aria-label="כמה ילדים לוקחים"
                                                     >
-                                                        {[2, 3, 4].map((n) => (
-                                                            <option key={n} value={n}>
-                                                                {n} ילדים
-                                                            </option>
-                                                        ))}
+                                                        {canClaim ? (
+                                                            Array.from({ length: Math.max(0, maxSeats - 1) }, (_, i) => i + 2).map((n) => (
+                                                                <option key={n} value={n}>
+                                                                    {n} ילדים
+                                                                </option>
+                                                            ))
+                                                        ) : (
+                                                            <option>—</option>
+                                                        )}
                                                     </select>
                                                     <button
-                                                        disabled={busyId === shift.id}
-                                                        onClick={() => act(shift, 'assign', seatsChoice[shift.id] ?? 2)}
+                                                        disabled={busyId === shift.id || !canClaim}
+                                                        onClick={() => act(shift, 'assign', Math.min(seatsChoice[shift.id] ?? 2, maxSeats))}
+                                                        title={!canClaim ? 'כל הילדים כבר משובצים לכיוון הזה' : undefined}
                                                         className="rounded-lg bg-[#E8A33D] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
                                                     >
                                                         אני מסיע
@@ -501,6 +525,33 @@ export default function Main({
  * who currently holds it or whether it already happened. Parents have no
  * personal name (removed site-wide) so options are labeled by family.
  */
+/**
+ * Multiple parent/device records can belong to the same family (e.g. one
+ * phone per parent), which previously made "משפחת X" appear once per
+ * device in the admin override dropdown. Collapse to one entry per family
+ * - but if this shift is already assigned to a specific device, keep that
+ * exact one as the representative so the <select>'s value still matches
+ * an available option (otherwise it'd show blank for an already-assigned
+ * shift whenever the assigned device isn't the "first" one for its family).
+ */
+function dedupedParentOptions(parents: ParentRow[], currentParentId: number | null): ParentRow[] {
+    const byFamily = new Map<number, ParentRow>();
+    const withoutFamily: ParentRow[] = [];
+
+    for (const p of parents) {
+        if (!p.family) {
+            withoutFamily.push(p);
+            continue;
+        }
+        const existing = byFamily.get(p.family.id);
+        if (!existing || p.id === currentParentId) {
+            byFamily.set(p.family.id, p);
+        }
+    }
+
+    return [...byFamily.values(), ...withoutFamily];
+}
+
 function AdminOverrideControls({
     shift,
     parents,
@@ -536,7 +587,7 @@ function AdminOverrideControls({
                 className="min-w-28 flex-1 rounded border border-[#D8DDD9] bg-white px-1.5 py-1 text-[#1B4332]"
             >
                 <option value="">— פנוי —</option>
-                {parents.map((p) => (
+                {dedupedParentOptions(parents, shift.parentId).map((p) => (
                     <option key={p.id} value={p.id}>
                         {p.family ? `משפחת ${p.family.name}` : `מכשיר #${p.id} (ללא שיוך)`}
                     </option>
@@ -575,6 +626,26 @@ function AdminOverrideControls({
  * Fixed positioning + pointer-events: none means it never blocks anything
  * underneath.
  */
+/**
+ * A day with no club session - Israeli holiday / day of rest (PRD 4.2.2).
+ * Shaded, unassignable, with the holiday's name shown prominently. No
+ * shifts exist for this date at all (see ShiftWeek::ensureGenerated), so
+ * there's nothing interactive to render here.
+ */
+function HolidayDayCard({ date, name }: { date: string; name: string }) {
+    return (
+        <div className="mb-5 overflow-hidden rounded-2xl bg-[#EDEDE7] opacity-70 shadow-sm">
+            <div className="px-4 py-6 text-center">
+                <p className="text-xs text-[#5C6B66]">
+                    יום {DAY_LABELS[new Date(date).getDay()]} · {date}
+                </p>
+                <p className="mt-1 text-lg font-bold text-[#5C6B66]">{name}</p>
+                <p className="mt-1 text-xs text-[#5C6B66]">אין חוג ואי אפשר להשתבץ ביום זה</p>
+            </div>
+        </div>
+    );
+}
+
 function CelebrationBadge() {
     return (
         <div className="pointer-events-none fixed top-1/2 left-1/2 z-50 text-6xl" style={{ animation: 'carpool-ball-kick 1.6s ease-in forwards' }}>

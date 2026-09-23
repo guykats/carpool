@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Family;
+use App\Models\Holiday;
 use App\Models\ParentUser;
 use App\Models\Setting;
 use App\Models\Shift;
@@ -19,6 +20,7 @@ class AdminController extends Controller
             'families' => Family::orderBy('name')->get(),
             'parents' => ParentUser::with('family:id,name')->orderBy('id')->get(),
             'settings' => Setting::current(),
+            'holidays' => Holiday::orderBy('date')->get(),
         ]);
     }
 
@@ -104,5 +106,32 @@ class AdminController extends Controller
         $settings->update($data);
 
         return response()->json(['settings' => $settings]);
+    }
+
+    /**
+     * Add a holiday date (Israeli holidays / days of rest - no club
+     * session, see PRD 4.2.2). Shifts are never generated for this date
+     * going forward - see ShiftWeek::ensureGenerated. If shifts already
+     * exist for this date (the week was viewed before the holiday was
+     * added), they're left as-is; use the override controls on the board
+     * to clear them manually.
+     */
+    public function storeHoliday(Request $request)
+    {
+        $data = $request->validate([
+            'date' => ['required', 'date_format:Y-m-d', 'unique:holidays,date'],
+            'name' => ['required', 'string', 'max:255'],
+        ]);
+
+        $holiday = Holiday::create($data);
+
+        return response()->json(['holiday' => $holiday]);
+    }
+
+    public function destroyHoliday(Holiday $holiday)
+    {
+        $holiday->delete();
+
+        return response()->json(['ok' => true]);
     }
 }
