@@ -162,6 +162,8 @@ export default function Main({
 }) {
     const [busyId, setBusyId] = useState<number | null>(null);
     const [notice, setNotice] = useState<string | null>(null);
+    // Pending 2-child booking that breaks the soft rules; waits for the user to confirm.
+    const [pendingTwo, setPendingTwo] = useState<{ shift: Shift; maxSeats: number } | null>(null);
     const [seatsChoice, setSeatsChoice] = useState<Record<number, number>>({});
     const [celebration, setCelebration] = useState<string | null>(null);
     // Admin edit mode: when off, an admin sees the board exactly like any
@@ -331,6 +333,43 @@ export default function Main({
                 {notice && (
                     <div className="mb-4 rounded-lg bg-amber-100 px-3 py-2 text-sm text-amber-900">{notice}</div>
                 )}
+                {pendingTwo && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" role="dialog" aria-modal="true">
+                        <div className="w-full max-w-sm rounded-2xl bg-white p-5 text-right shadow-xl">
+                            <h2 className="mb-2 text-base font-bold text-[#1B4332]">רגע, לפני ששומרים</h2>
+                            <p className="mb-2 text-sm text-[#1B4332]">
+                                בחרתם לקחת 2 ילדים. הכלל שלנו: לשבץ לפחות 3 ילדים ברכב.
+                            </p>
+                            <p className="mb-4 text-sm text-[#5C6B66]">
+                                למה? המטרה היא שיסעו כמה שפחות הורים, ושנדע מראש מי נוסע, ולא נגלה ברגע האחרון שלילדים אין מקום או
+                                שיצאו הרבה רכבים חצי ריקים. 2 ילדים מתאים בעיקר כשנשארו בדיוק 2 ילדים, או כשכבר שובצתם באותו כיוון
+                                ורוצים להרחיב. אם זה באמת מה שמתאים לכם, אפשר להמשיך.
+                            </p>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => {
+                                        const { shift } = pendingTwo;
+                                        setPendingTwo(null);
+                                        act(shift, 'assign', 2);
+                                    }}
+                                    className="flex-1 rounded-lg border border-[#D8DDD9] px-3 py-2 text-sm text-[#5C6B66]"
+                                >
+                                    שבצו אותי בכל זאת
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        const { shift, maxSeats } = pendingTwo;
+                                        setSeatsChoice((prev) => ({ ...prev, [shift.id]: Math.min(3, maxSeats) }));
+                                        setPendingTwo(null);
+                                    }}
+                                    className="flex-1 rounded-lg bg-[#E8A33D] px-3 py-2 text-sm font-semibold text-white"
+                                >
+                                    אשנה ל-3
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 <div className="mb-4 flex items-center justify-between">
                     <button
@@ -377,9 +416,9 @@ export default function Main({
                                 const direction: 'departure' | 'return' = shift.type.startsWith('departure') ? 'departure' : 'return';
                                 const remaining = remainingFor(dayShifts, direction);
                                 const maxSeats = Math.min(4, remaining);
-                                // Seat options: min 3 normally. Only 2 when exactly 2 remain, or when
-                                // this family already holds a car in this direction (extending to 5-6).
-                                // When only 1 remains, allow 1 so the board can't get stuck.
+                                // Seat options: 2-4 (default 3). Choosing 2 when more than 2 remain and the
+                                // family has no car in this direction asks for confirmation first.
+                                // When only 1 remains, offer 1 so the board can't get stuck.
                                 const hasOwnInDirection = dayShifts.some(
                                     (s) => s.type.startsWith(direction) && s.familyId === currentParent.family_id && s.seats,
                                 );
@@ -388,10 +427,9 @@ export default function Main({
                                         ? []
                                         : remaining <= 2
                                           ? [remaining]
-                                          : Array.from({ length: maxSeats - 1 }, (_, i) => i + 2).filter(
-                                                (n) => n >= 3 || hasOwnInDirection,
-                                            );
+                                          : Array.from({ length: maxSeats - 1 }, (_, i) => i + 2);
                                 const canClaim = seatOptions.length > 0;
+                                const breaksTwoRule = (n: number) => n === 2 && remaining > 2 && !hasOwnInDirection;
                                 const preferred = seatsChoice[shift.id] ?? 3;
                                 const selectedSeats = seatOptions.includes(preferred)
                                     ? preferred
@@ -468,7 +506,13 @@ export default function Main({
                                                     </select>
                                                     <button
                                                         disabled={busyId === shift.id || !canClaim}
-                                                        onClick={() => act(shift, 'assign', selectedSeats)}
+                                                        onClick={() => {
+                                                            if (breaksTwoRule(selectedSeats)) {
+                                                                setPendingTwo({ shift, maxSeats });
+                                                            } else {
+                                                                act(shift, 'assign', selectedSeats);
+                                                            }
+                                                        }}
                                                         title={!canClaim ? 'כל הילדים כבר משובצים לכיוון הזה' : undefined}
                                                         className="rounded-lg bg-[#E8A33D] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
                                                     >
