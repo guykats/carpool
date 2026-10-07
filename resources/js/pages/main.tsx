@@ -343,18 +343,14 @@ export default function Main({
                             <p className="mb-4 text-sm text-[#5C6B66]">
                                 למה? המטרה היא שיסעו כמה שפחות הורים, ושנדע מראש מי נוסע, ולא נגלה ברגע האחרון שלילדים אין מקום או
                                 שיצאו הרבה רכבים חצי ריקים. 2 ילדים מתאים בעיקר כשנשארו בדיוק 2 ילדים, או כשכבר שובצתם באותו כיוון
-                                ורוצים להרחיב. אם זה באמת מה שמתאים לכם, אפשר להמשיך.
+                                ורוצים להרחיב.
                             </p>
                             <div className="flex gap-2">
                                 <button
-                                    onClick={() => {
-                                        const { shift } = pendingTwo;
-                                        setPendingTwo(null);
-                                        act(shift, 'assign', 2);
-                                    }}
+                                    onClick={() => setPendingTwo(null)}
                                     className="flex-1 rounded-lg border border-[#D8DDD9] px-3 py-2 text-sm text-[#5C6B66]"
                                 >
-                                    שבצו אותי בכל זאת
+                                    ביטול
                                 </button>
                                 <button
                                     onClick={() => {
