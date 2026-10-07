@@ -225,6 +225,14 @@ export default function Main({
                 setNotice(`הפעולה נכשלה (שגיאה ${res.status}), נסו לרענן ולנסות שוב.`);
                 return;
             } else if (action === 'assign' && seats) {
+                try {
+                    const body = await res.clone().json();
+                    if (body?.merged && body.shift) {
+                        setNotice(`איחדנו עם ההסעה הקיימת שלך: ${SLOT_LABELS[body.shift.type as Shift['type']]} — עכשיו ${body.shift.seats} ילדים`);
+                    }
+                } catch (e) {
+                    console.error('Merge notice failed (non-critical):', e);
+                }
                 // Isolated in its own try/catch: if this throws for any
                 // reason (confetti/canvas quirk on a specific browser,
                 // ad blocker, etc.), it must never prevent router.reload()

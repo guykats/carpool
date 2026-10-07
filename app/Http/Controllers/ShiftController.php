@@ -75,6 +75,41 @@ class ShiftController extends Controller
             'seats' => ['required', 'integer', 'min:2', 'max:4'],
         ]);
 
+        // Auto-merge: if this family already holds a car on the same date and
+        // direction, and the combined seats fit in one car (max 4), fold the
+        // new request into the existing row instead of taking a second slot.
+        // This keeps the scoreboard from counting one family's ride twice.
+        $direction = str_starts_with($shift->type, 'departure') ? 'departure' : 'return';
+        $existing = DB::table('shifts')
+            ->where('date', $shift->date instanceof \DateTimeInterface ? $shift->date->format('Y-m-d') : $shift->date)
+            ->where('type', 'like', $direction.'%')
+            ->where('family_id', $parent->family_id)
+            ->where('id', '!=', $shift->id)
+            ->whereNotNull('seats')
+            ->orderBy('type')
+            ->get()
+            ->first(fn ($row) => $row->seats + $data['seats'] <= 4);
+
+        if ($existing && $shift->parent_id === null) {
+            $merged = DB::table('shifts')
+                ->where('id', $existing->id)
+                ->where('seats', $existing->seats)
+                ->where('family_id', $parent->family_id)
+                ->update([
+                    'seats' => $existing->seats + $data['seats'],
+                    'updated_at' => now(),
+                ]);
+
+            if ($merged === 0) {
+                return response()->json(['error' => 'The booking just changed. Refreshing the board.'], 409);
+            }
+
+            return response()->json([
+                'shift' => ShiftWeek::present(Shift::with(['family', 'parent'])->find($existing->id)),
+                'merged' => true,
+            ]);
+        }
+
         $updated = DB::table('shifts')
             ->where('id', $shift->id)
             ->whereNull('parent_id')
