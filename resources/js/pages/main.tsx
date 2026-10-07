@@ -430,7 +430,7 @@ export default function Main({
                                             {!shift.familyName && !shift.isPast && (
                                                 <>
                                                     <select
-                                                        value={Math.min(seatsChoice[shift.id] ?? 2, maxSeats || 2)}
+                                                        value={Math.min(seatsChoice[shift.id] ?? 3, maxSeats || 2)}
                                                         onChange={(e) =>
                                                             setSeatsChoice((prev) => ({ ...prev, [shift.id]: Number(e.target.value) }))
                                                         }
@@ -450,7 +450,7 @@ export default function Main({
                                                     </select>
                                                     <button
                                                         disabled={busyId === shift.id || !canClaim}
-                                                        onClick={() => act(shift, 'assign', Math.min(seatsChoice[shift.id] ?? 2, maxSeats))}
+                                                        onClick={() => act(shift, 'assign', Math.min(seatsChoice[shift.id] ?? 3, maxSeats))}
                                                         title={!canClaim ? 'כל הילדים כבר משובצים לכיוון הזה' : undefined}
                                                         className="rounded-lg bg-[#E8A33D] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
                                                     >
