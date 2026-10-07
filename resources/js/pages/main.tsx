@@ -377,7 +377,25 @@ export default function Main({
                                 const direction: 'departure' | 'return' = shift.type.startsWith('departure') ? 'departure' : 'return';
                                 const remaining = remainingFor(dayShifts, direction);
                                 const maxSeats = Math.min(4, remaining);
-                                const canClaim = remaining >= 2;
+                                // Seat options: min 3 normally. Only 2 when exactly 2 remain, or when
+                                // this family already holds a car in this direction (extending to 5-6).
+                                // When only 1 remains, allow 1 so the board can't get stuck.
+                                const hasOwnInDirection = dayShifts.some(
+                                    (s) => s.type.startsWith(direction) && s.familyId === currentParent.family_id && s.seats,
+                                );
+                                const seatOptions: number[] =
+                                    remaining <= 0
+                                        ? []
+                                        : remaining <= 2
+                                          ? [remaining]
+                                          : Array.from({ length: maxSeats - 1 }, (_, i) => i + 2).filter(
+                                                (n) => n >= 3 || hasOwnInDirection,
+                                            );
+                                const canClaim = seatOptions.length > 0;
+                                const preferred = seatsChoice[shift.id] ?? 3;
+                                const selectedSeats = seatOptions.includes(preferred)
+                                    ? preferred
+                                    : (seatOptions[seatOptions.length - 1] ?? 0);
                                 return (
                                     <li
                                         key={shift.id}
@@ -430,7 +448,7 @@ export default function Main({
                                             {!shift.familyName && !shift.isPast && (
                                                 <>
                                                     <select
-                                                        value={Math.min(seatsChoice[shift.id] ?? 3, maxSeats || 2)}
+                                                        value={selectedSeats || ''}
                                                         onChange={(e) =>
                                                             setSeatsChoice((prev) => ({ ...prev, [shift.id]: Number(e.target.value) }))
                                                         }
@@ -439,9 +457,9 @@ export default function Main({
                                                         aria-label="כמה ילדים לוקחים"
                                                     >
                                                         {canClaim ? (
-                                                            Array.from({ length: Math.max(0, maxSeats - 1) }, (_, i) => i + 2).map((n) => (
+                                                            seatOptions.map((n) => (
                                                                 <option key={n} value={n}>
-                                                                    {n} ילדים
+                                                                    {n === 1 ? 'ילד אחד' : `${n} ילדים`}
                                                                 </option>
                                                             ))
                                                         ) : (
@@ -450,7 +468,7 @@ export default function Main({
                                                     </select>
                                                     <button
                                                         disabled={busyId === shift.id || !canClaim}
-                                                        onClick={() => act(shift, 'assign', Math.min(seatsChoice[shift.id] ?? 3, maxSeats))}
+                                                        onClick={() => act(shift, 'assign', selectedSeats)}
                                                         title={!canClaim ? 'כל הילדים כבר משובצים לכיוון הזה' : undefined}
                                                         className="rounded-lg bg-[#E8A33D] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
                                                     >

@@ -72,7 +72,7 @@ class ShiftController extends Controller
         abort_if(! $parent, 401);
 
         $data = $request->validate([
-            'seats' => ['required', 'integer', 'min:2', 'max:4'],
+            'seats' => ['required', 'integer', 'min:1', 'max:4'],
         ]);
 
         // Auto-merge: if this family already holds a car on the same date and
