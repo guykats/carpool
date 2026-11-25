@@ -10,7 +10,11 @@ class Family extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name'];
+    protected $fillable = ['name', 'is_admin'];
+
+    protected $casts = [
+        'is_admin' => 'boolean',
+    ];
 
     public function parents(): HasMany
     {

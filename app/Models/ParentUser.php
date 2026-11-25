@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -22,9 +23,16 @@ class ParentUser extends Model
 
     protected $fillable = ['uuid', 'family_id', 'is_admin'];
 
-    protected $casts = [
-        'is_admin' => 'boolean',
-    ];
+    /**
+     * A device is admin if flagged itself, or if its family is an admin
+     * family. Raw column value is still used for DB queries (e.g. seeder).
+     */
+    protected function isAdmin(): Attribute
+    {
+        return Attribute::get(
+            fn ($value) => (bool) $value || (bool) $this->family?->is_admin
+        );
+    }
 
     public function family(): BelongsTo
     {
